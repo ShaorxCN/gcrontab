@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Configer 配置文件接口，需要实现初始化和重启功能。
+// Configer 配置文件接口，需要实现初始化重启以及终止功能。
 
 type Configer interface {
 	Init() error
@@ -18,12 +18,12 @@ type Configer interface {
 	Stop()
 }
 
-// Management 是配置管理。
+// Management 配置管理。
 type Management struct {
 	Configs map[string]Configer
 }
 
-// DefaultManagement 管理 config 默认实例。
+// DefaultManagement  默认实例。
 var DefaultManagement *Management
 
 func init() {
@@ -34,6 +34,9 @@ func init() {
 
 // Register 将需要的配置信息注册到配置管理。
 func (cm *Management) Register(name string, c Configer) {
+	if _, ok := cm.Configs[name]; ok {
+		logrus.Infof("config [%s] exists,overwrite...", name)
+	}
 	cm.Configs[name] = c
 }
 
@@ -57,7 +60,7 @@ func (cm *Management) Stop() {
 	}
 }
 
-// loadConfigFile 加载本地配置文件。
+// loadConfigFile 加载本地配置文件 默认当前config.json
 func (cm *Management) loadConfigFile() error {
 	filePath := flag.String("cf", "./config.json", "config path")
 	flag.Parse()
@@ -82,30 +85,33 @@ func (cm *Management) loadConfigFile() error {
 
 // getConfigFromENV 从 env 获取配置信息。
 func (cm *Management) getConfigFromENV() bool {
-	envCount := 0
+	var envCount int
 	// 通过反射找到字段对应的环境变量值
-	for _, config := range cm.Configs {
-		sType := reflect.TypeOf(config)
-		sValue := reflect.ValueOf(config)
-		length := sValue.Elem().NumField()
+	for name, config := range cm.Configs {
+		envCount = 0
+		cType := reflect.TypeOf(config)
+		cValue := reflect.ValueOf(config)
+		length := cValue.Elem().NumField()
 		for i := 0; i < length; i++ {
-			envName := sType.Elem().Field(i).Tag.Get("env")
+			envName := cType.Elem().Field(i).Tag.Get("env")
 			envValue := os.Getenv(envName)
 			if envValue != "" {
 				envCount++
-				switch sValue.Elem().Field(i).Kind() {
+				switch cValue.Elem().Field(i).Kind() {
 				case reflect.String:
-					sValue.Elem().Field(i).SetString(envValue)
-				case reflect.Int64, reflect.Int:
+					cValue.Elem().Field(i).SetString(envValue)
+				case reflect.Int, reflect.Int64:
 					intVal, err := strconv.ParseInt(envValue, 10, 64)
 					if err != nil {
 						logrus.Error(err)
 					} else {
-						sValue.Elem().Field(i).SetInt(intVal)
+						cValue.Elem().Field(i).SetInt(intVal)
 					}
-
 				}
 			}
+		}
+		if envCount != length {
+			logrus.WithField("configName", name).Info("init with default value")
 		}
 	}
 	return envCount != 0
