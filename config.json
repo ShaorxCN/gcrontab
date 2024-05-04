@@ -1,0 +1,42 @@
+{
+    "db_config": {
+        "db_host": "",
+        "db_port": "",
+        "db_user": "",
+        "db_name": "",
+        "db_password": "",
+        "db_ssl_mode": "disable",
+        "db_pagesize_limit": 500,
+        "db_pagesize_default": 20
+    },
+    "redis_config": {
+        "redis_host": "",
+        "redis_port": "",
+        "redis_password": "",
+        "redis_maxidle": 20,
+        "redis_idle_timeout": 600,
+        "redis_index": 1
+    },
+    "gin_config": {
+        "gin_host": "",
+        "gin_port": "",
+        "gin_mode": "",
+        "gin_token_ttl": 60,
+        "gin_token_cache_size": 300,
+        "admin_userName": "",
+        "admin_passWord": "",
+        "admin_email": "",
+        "api_secret": "",
+        "task_timeout": 3600000,
+        "StatePort": 3998
+    },
+    "email_config": {
+        "email_addr": "",
+        "email_host": "",
+        "email_passWord": "",
+        "email_user": "",
+        "test_email": "",
+        "timeout": 10,
+        "view_url": ""
+    }
+}
