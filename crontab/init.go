@@ -29,8 +29,7 @@ type CrontabConfig struct {
 	// 立即运行的channel容量
 	RunSize int `json:"crontab_run_size" env:"CRONTAB_RUN_SIZE"`
 	// 扫表间隔
-	Interval int `json:"crontab_interval" env:"CRONTAB_INTERVAL"`
-
+	Interval     int    `json:"crontab_interval" env:"CRONTAB_INTERVAL"`
 	TimeLocation string `json:"crontab_timeLocation" env:"CRONTAB_TIMELOCATION"`
 }
 

@@ -7,6 +7,7 @@ package gocron
 
 import (
 	"gcrontab/constant"
+	"gcrontab/entity/task"
 
 	"gcrontab/custom"
 	"gcrontab/model"
@@ -24,11 +25,7 @@ var (
 	ts *taskScheduler
 	// imStop      chan int
 	// sStop       chan int
-
-	// TaskChannel 任务channel
-	TaskChannel chan *model.DBTask
-	// PeoPlusKey 调用P+的key
-	PeoPlusKey string
+	todo []*task.Task
 )
 
 type taskScheduler struct {
@@ -58,7 +55,7 @@ func ExecImmediately(t *model.DBTask, tl *model.DBTaskLog) {
 
 // TODO: 改成例如2h内需要执行的甚至当天需要执行  然后根据时间排序？ 或者all go 然后time.after? add or update ？
 // TODO: 2h扫描有一次 然后内存保持维护排序 每秒扫描检查是否需要执行？如果nexttime 计算下如果还是这个周期内则修改完后继续加入队列 否则只落到db
-// 因为放弃使用所有go出去time.after 阻塞 而是每秒扫描时间排序  数据结构 map[id]entity 还有个[]time.Time 实现time sort
+// 因为放弃使用所有go出去time.after 阻塞 而是每秒扫描时间排序  数据结构 map[id]entity 还有个[]time.Time 实现time sort 不用sort直接扫这样也方便修改
 func (ts *taskScheduler) schedulerStart() {
 
 	ticker := time.NewTicker(time.Duration(ts.ScanInterval) * time.Millisecond)
