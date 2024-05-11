@@ -1,13 +1,9 @@
-package gocron
-
-/**
- * 任务完成或者超时才记录日志
- * 20190805 执行前记录日志  完成后更新
- */
+package crontab
 
 import (
 	"gcrontab/constant"
 	"gcrontab/entity/task"
+	taskRep "gcrontab/rep_service/task"
 
 	"gcrontab/custom"
 	"gcrontab/model"
@@ -23,9 +19,11 @@ import (
 
 var (
 	ts *taskScheduler
-	// imStop      chan int
-	// sStop       chan int
-	todo []*task.Task
+	// 立即运行的channel  会更新下次执行时间并且记录user host等信息。
+	imme_tasks chan *task.Task
+	// 排除部分不需要执行的任务记录id以及本来正常执行的时间  然后正常队列运行前再次检查这个时间是否一致 一致跳过
+	except map[uuid.UUID]time.Time
+	todo   []*task.Task
 )
 
 type taskScheduler struct {
@@ -48,8 +46,17 @@ func (ts *taskScheduler) Start() {
 	go ts.schedulerStart()
 }
 
+func getLockInMap(t *task.Task) error {
+	return utils.RegisterEntityInRedis(t, constant.Host, t.Expired_time/1000)
+
+}
+
+func unLockInMap(t *task.Task) error {
+	return utils.UnregisterEntityInRedis(t)
+}
+
 // ExecImmediately 立即执行
-func ExecImmediately(t *model.DBTask, tl *model.DBTaskLog) {
+func ExecImmediately(t *task.Task, tl *model.DBTaskLog) {
 	ts.handler(t, tl)
 }
 
@@ -57,14 +64,15 @@ func ExecImmediately(t *model.DBTask, tl *model.DBTaskLog) {
 // TODO: 2h扫描有一次 然后内存保持维护排序 每秒扫描检查是否需要执行？如果nexttime 计算下如果还是这个周期内则修改完后继续加入队列 否则只落到db
 // 因为放弃使用所有go出去time.after 阻塞 而是每秒扫描时间排序  数据结构 map[id]entity 还有个[]time.Time 实现time sort 不用sort直接扫这样也方便修改
 func (ts *taskScheduler) schedulerStart() {
-
-	ticker := time.NewTicker(time.Duration(ts.ScanInterval) * time.Millisecond)
+	var deadline time.Time
+	tickerInDB := time.NewTicker(time.Duration(ts.ScanInterval) * time.Millisecond)
+	tickerInMem := time.NewTicker(1 * time.Second)
 	// idleTimeDuration := time.After(1 * time.Second)
 	for {
-		now := utils.Now()
-		tasks, err := model.FindActiveTasks(now)
+		deadline := utils.Now().Add(time.Duration(ts.ScanInterval) * time.Millisecond)
+		tasks, err := taskRep.FindActiveTasks(deadline)
 		if err != nil {
-			// TODO:notify
+			// TODO:maybe notify
 			logger.WithTime(utils.Now()).Errorf("find active tasks failed:%v", err)
 		}
 		select {

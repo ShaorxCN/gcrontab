@@ -35,7 +35,7 @@ var (
 
 	ErroEntityKeyParam         = errors.New("neither idValue or tpValue can be empty")
 	ErrorInvalideAccessToken   = errors.New("登陆状态失效")
-	ErrorSaveToDBFailed        = errors.New("操作数据库失败")
+	ErrorSaveToDBFailed        = errors.New("操作数据库/redis失败")
 	ErrorInvalideRequest       = errors.New("请求格式错误")
 	ErrorCalculateTimeFailed   = errors.New("计算下次执行时间出错")
 	ErrorEntityLocked          = errors.New("系统忙 请稍后重试")

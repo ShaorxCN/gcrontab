@@ -38,5 +38,12 @@
         "test_email": "",
         "timeout": 10,
         "view_url": ""
-    }
+    },
+    "crontab_config": {
+        "crontab_maxgoroutine": 10000,
+        "crontab_run_size": 1000,
+        "crontab_interval": 1000,
+        "crontab_timeLocation": "",
+        "block_alert_time": 300
+    },
 }

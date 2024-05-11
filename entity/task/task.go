@@ -2,7 +2,8 @@ package task
 
 import (
 	"gcrontab/constant"
-	entitier "gcrontab/entity"
+	"gcrontab/entity"
+	entitier "gcrontab/interface/entity"
 	"gcrontab/model"
 	"gcrontab/utils"
 	"time"
@@ -12,12 +13,12 @@ import (
 
 const (
 	// TaskEntityType entity type
-	TaskEntityType = "tbl_task"
+	TaskEntityType = "task"
 )
 
 // Task 任务实体
 type Task struct {
-	entitier.BaseEntity
+	entity.BaseEntity
 	Name             string    `json:"name,omitempty" url:"name,omitempty"`
 	IntervalDuration int       `json:"intervalDuration,omitempty" url:"intervalDuration,omitempty"`
 	UnitOfInterval   string    `json:"unitOfInterval,omitempty" url:"unitOfInterval,omitempty"`
@@ -74,7 +75,7 @@ func (t *Task) ToDBTaskModel() (*model.DBTask, error) {
 		d.UpdateAt = &update
 	}
 
-	uid, err := uuid.Parse(t.ID)
+	uid, err := uuid.Parse(t.ID.GetIDValue())
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,7 @@ func (t *Task) ToDBTaskModel() (*model.DBTask, error) {
 // FromDBTaskModel 将任务Model转为实体。
 func FromDBTaskModel(d *model.DBTask) *Task {
 	t := new(Task)
-	t.ID = d.ID.String()
+	t.ID = entitier.NewEntityKey(d.ID.String(), TaskEntityType)
 	t.CreateAt = d.CreateAt.In(utils.DefaultLocation).Format(constant.TIMELAYOUT)
 	if d.UpdateAt != nil {
 		t.UpdateAt = d.UpdateAt.In(utils.DefaultLocation).Format(constant.TIMELAYOUT)

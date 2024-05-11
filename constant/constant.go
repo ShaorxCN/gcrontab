@@ -1,5 +1,11 @@
 package constant
 
+import (
+	"os"
+
+	"github.com/sirupsen/logrus"
+)
+
 const (
 
 	// header
@@ -65,3 +71,16 @@ const (
 	// 逻辑删除
 	STATUSDEL = "del"
 )
+
+var (
+	Host string
+)
+
+func init() {
+	host, err := os.Hostname()
+	if err != nil {
+		logrus.WithField("host", host).Errorf("get hostname failed:%v", err)
+	}
+
+	Host = host
+}

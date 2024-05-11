@@ -1,12 +1,83 @@
 package model
 
 import (
+	"bytes"
 	"fmt"
 	"gcrontab/constant"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// TaskParams 可以参与查询条件的参数
+type TaskParams struct {
+	ID          uuid.UUID   `json:"-"`
+	Page        int         `json:"page,omitempty"`
+	PageSize    int         `json:"pageSize,omitempty"`
+	Name        string      `json:"name,omitempty"`
+	Status      string      `json:"status,omitempty"`
+	Creater     string      `json:"creater,omitempty"`
+	StartTime   time.Time   `json:"createTimeStart,omitempty"`
+	EndTime     time.Time   `json:"createTimeEnd,omitempty"`
+	SortedBy    string      `json:"sortedBy,omitempty"`
+	Order       string      `json:"order,omitempty"`
+	CreaterName string      `json:"createrName,omitempty"`
+	CompanyCode string      `json:"companyCode,omitempty"`
+	LogTaskID   string      `json:"taskID,omitempty"`
+	TimeStamp   int64       `json:"timeStamp,omitempty"`
+	TaskIDS     []uuid.UUID `json:"-"`
+}
+
+func task_buildQuery(p *TaskParams) (string, []interface{}) {
+
+	var buf bytes.Buffer
+
+	args := make([]interface{}, 0, 3)
+	if p.Status != "" {
+		buf.WriteString("status = ?")
+		args = append(args, p.Status)
+	} else {
+		buf.WriteString("status != ?")
+		args = append(args, constant.STATUSDEL)
+	}
+
+	if p.Name != "" {
+		buf.WriteString(" and name ilike ?")
+		args = append(args, fmt.Sprintf("%%%s%%", p.Name))
+	}
+
+	if p.Creater != "" {
+		buf.WriteString(" and creater = ?")
+		args = append(args, p.Creater)
+	}
+
+	if p.Status != "" {
+		buf.WriteString(" and status = ?")
+		args = append(args, p.Status)
+	}
+
+	if p.CreaterName != "" {
+		buf.WriteString(" and creater_name = ?")
+		args = append(args, p.CreaterName)
+	}
+
+	if !p.StartTime.IsZero() && !p.EndTime.IsZero() {
+		buf.WriteString(" and Create_at between ? and ?")
+		args = append(args, p.StartTime, p.EndTime)
+	} else {
+		if !p.StartTime.IsZero() {
+			buf.WriteString(" and Create_at >= ?")
+			args = append(args, p.StartTime)
+		}
+
+		if !p.EndTime.IsZero() {
+			buf.WriteString(" and Create_at <= ?")
+			args = append(args, p.EndTime)
+		}
+	}
+
+	return buf.String(), args
+}
 
 // DBTask 是任务的数据库模型。
 type DBTask struct {
@@ -41,6 +112,33 @@ var taskTableName = new(DBTask).TableName()
 // TableName 返回批次数据表名
 func (DBTask) TableName() string {
 	return "tbl_task"
+}
+
+func FindTasksByParam(p *TaskParams) ([]*DBTask, int, error) {
+	limit := p.PageSize
+	offset := (p.Page - 1) * p.PageSize
+
+	db := DB().Table(taskTableName)
+
+	if p.SortedBy != "" {
+		if p.Order == constant.ASC || p.Order == constant.DESC {
+			db = db.Order(fmt.Sprintf(" %s %s", p.SortedBy, p.Order))
+		}
+		db = db.Order(p.SortedBy)
+	} else {
+		db = db.Order("create_at DESC")
+	}
+
+	sqlStr, args := task_buildQuery(p)
+	db = db.Where(sqlStr, args...)
+	var DBtasks []*DBTask
+	var count int
+	err := db.Count(&count).Error
+	if err != nil {
+		return DBtasks, count, err
+	}
+	err = db.Limit(limit).Offset(offset).Find(&DBtasks).Error
+	return DBtasks, count, err
 }
 
 // FindTaskByID 根据ID 查找Task 状态不为删除：del

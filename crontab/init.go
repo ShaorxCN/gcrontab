@@ -1,9 +1,11 @@
-package gocron
+package crontab
 
 import (
-	"gcrontab/model"
+	"gcrontab/entity/task"
 	"gcrontab/utils"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,6 +33,8 @@ type CrontabConfig struct {
 	// 扫表间隔
 	Interval     int    `json:"crontab_interval" env:"CRONTAB_INTERVAL"`
 	TimeLocation string `json:"crontab_timeLocation" env:"CRONTAB_TIMELOCATION"`
+	// 任务队列阻塞警告时间线  单位秒
+	BlockAlertTime int `json:"block_alert_time" env:"BLOCK_ALERT_TIME"`
 }
 
 // Init 开启定时任务。
@@ -50,7 +54,8 @@ func (c *CrontabConfig) Init() error {
 	ts = new(taskScheduler)
 	ts.MaxGoroutine = make(chan int, c.MaxGoroutine)
 	ts.ScanInterval = c.Interval
-	TaskChannel = make(chan *model.DBTask, c.RunSize)
+	imme_tasks = make(chan *task.Task, c.RunSize)
+	except = make(map[uuid.UUID]time.Time)
 	ts.exit = make(chan struct{})
 
 	err := utils.InitTimeLocation(c.TimeLocation)
