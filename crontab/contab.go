@@ -21,9 +21,7 @@ var (
 	ts *taskScheduler
 	// 立即运行的channel  会更新下次执行时间并且记录user host等信息。
 	imme_tasks chan *task.Task
-	// 排除部分不需要执行的任务记录id以及本来正常执行的时间  然后正常队列运行前再次检查这个时间是否一致 一致跳过
-	except map[uuid.UUID]time.Time
-	todo   []*task.Task
+	todo       []*task.Task
 )
 
 type taskScheduler struct {
@@ -46,7 +44,7 @@ func (ts *taskScheduler) Start() {
 	go ts.schedulerStart()
 }
 
-func getLockInMap(t *task.Task) error {
+func getLockInMap(t *task.Task) bool {
 	return utils.RegisterEntityInRedis(t, constant.Host, t.Expired_time/1000)
 
 }
@@ -90,9 +88,9 @@ func (ts *taskScheduler) schedulerStart() {
 		default:
 		}
 
-		for _, task := range tasks {
+		for _, te := range tasks {
 			ts.MaxGoroutine <- 1
-			go func(t *model.DBTask) {
+			go func(t *task.Task) {
 				defer func() {
 					<-ts.MaxGoroutine
 					if err := recover(); err != nil {
@@ -102,12 +100,12 @@ func (ts *taskScheduler) schedulerStart() {
 					}
 				}()
 				if !getLockInMap(t) {
-					logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] get Lock failed", t.ID.String(), t.Name)
+					logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] get Lock failed", t.ID.GetIDValue(), t.Name)
 					return
 				}
 
 				if !doubleCheck(now, t.ID) {
-					logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] double check failed", t.ID.String(), t.Name)
+					logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] double check failed", t.ID.GetIDValue(), t.Name)
 					err := unLockInMap(t)
 					if err != nil {
 						logger.WithTime(utils.Now()).Errorf("unlock entity failed:%v entity:%v", err, t.ID)
@@ -131,9 +129,9 @@ func (ts *taskScheduler) schedulerStart() {
 				logger.WithTime(utils.Now()).Infof("[%s]exec...", t.ID)
 				ts.handler(t, tl)
 
-			}(task)
+			}(te)
 		}
-		<-ticker.C
+		<-tickerInDB.C
 	}
 }
 

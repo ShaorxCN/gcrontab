@@ -6,15 +6,11 @@ import (
 )
 
 // RegisterEntityInRedis 注册entity到redis。
-func RegisterEntityInRedis(e entitier.Entitier, owner string, timeout int) error {
+func RegisterEntityInRedis(e entitier.Entitier, owner string, timeout int) bool {
 	entityKey := e.EntityKey()
 	err := redis.GetLock(entityKey.JSON(), owner, timeout)
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err == nil
 }
 
 // UnregisterEntityInRedis 从redis解除entity

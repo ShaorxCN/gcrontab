@@ -30,8 +30,10 @@ type CrontabConfig struct {
 	MaxGoroutine int `json:"crontab_maxgoroutine" env:"CRONTAB_MAXGOROUTINE"`
 	// 立即运行的channel容量
 	RunSize int `json:"crontab_run_size" env:"CRONTAB_RUN_SIZE"`
-	// 扫表间隔
-	Interval     int    `json:"crontab_interval" env:"CRONTAB_INTERVAL"`
+	// db扫表间隔
+	DBInterval int `json:"crontab_db_interval" env:"CRONTAB_DB_INTERVAL"`
+	// 内存数据扫描间隔
+	MemInterval  int    `json:"crontab_mem_interval" env:"CRONTAB_MEM_INTERVAL"`
 	TimeLocation string `json:"crontab_timeLocation" env:"CRONTAB_TIMELOCATION"`
 	// 任务队列阻塞警告时间线  单位秒
 	BlockAlertTime int `json:"block_alert_time" env:"BLOCK_ALERT_TIME"`
