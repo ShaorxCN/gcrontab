@@ -16,19 +16,21 @@ const (
 )
 
 type TaskLog struct {
-	TimeStamp   int64  `json:"timeStamp,omitempty"`
-	TaskName    string `json:"taskName,omitempty"`
-	TaskID      string `json:"taskID,omitempty"`
-	ResultCode  int    `json:"resultCode,omitempty"`
-	Result      string `json:"result,omitempty"`
-	Command     string `json:"command,omitempty"`
-	StartTime   string `json:"startTime,omitempty"`
-	EndTime     string `json:"endTime,omitempty"`
-	TotalTime   int64  `json:"totalTime,omitempty"`
-	Host        string `json:"host,omitempty"`
-	Status      string `json:"status,omitempty"` // 执行状态  processing or  success or fail
-	CompanyCode string `json:"companyCode,omitempty"`
-	User        string `json:"user,omitempty"` // 如果是立即执行 这里会存储操作的用户名字
+	TimeStamp   int64     `json:"timeStamp,omitempty"`
+	TaskName    string    `json:"taskName,omitempty"`
+	TaskID      string    `json:"taskID,omitempty"`
+	ResultCode  int       `json:"resultCode,omitempty"`
+	Result      string    `json:"result,omitempty"`
+	Command     string    `json:"command,omitempty"`
+	StartTime   string    `json:"startTime,omitempty"`
+	EndTime     string    `json:"endTime,omitempty"`
+	StartTimeT  time.Time `json:"-"`
+	EndTimeT    time.Time `json:"-"`
+	TotalTime   int64     `json:"totalTime,omitempty"`
+	Host        string    `json:"host,omitempty"`
+	Status      string    `json:"status,omitempty"` // 执行状态  processing or  success or fail
+	CompanyCode string    `json:"companyCode,omitempty"`
+	User        string    `json:"user,omitempty"` // 如果是立即执行 这里会存储操作的用户名字
 }
 
 func (l *TaskLog) EntityKey() entity.Key {

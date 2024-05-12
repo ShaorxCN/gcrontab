@@ -3,16 +3,15 @@ package crontab
 import (
 	"gcrontab/entity/task"
 	"gcrontab/utils"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	DefaultMaxGoroutine = 10000
-	DefaultScanInterval = 1000
-	DefaultRunSize      = 1000
+	DefaultMaxGoroutine    = 10000
+	DefaultDBScanInterval  = 60000
+	DefaultMemScanInterval = 1000
+	DefaultRunSize         = 1000
 )
 
 var logger *logrus.Logger
@@ -45,8 +44,12 @@ func (c *CrontabConfig) Init() error {
 		c.MaxGoroutine = DefaultMaxGoroutine
 	}
 
-	if c.Interval == 0 {
-		c.Interval = DefaultScanInterval
+	if c.DBInterval == 0 {
+		c.DBInterval = DefaultDBScanInterval
+	}
+
+	if c.MemInterval == 0 {
+		c.MemInterval = DefaultMemScanInterval
 	}
 
 	if c.RunSize == 0 {
@@ -55,9 +58,9 @@ func (c *CrontabConfig) Init() error {
 
 	ts = new(taskScheduler)
 	ts.MaxGoroutine = make(chan int, c.MaxGoroutine)
-	ts.ScanInterval = c.Interval
+	ts.DBScanInterval = c.DBInterval
+	ts.MemScanInterval = c.MemInterval
 	imme_tasks = make(chan *task.Task, c.RunSize)
-	except = make(map[uuid.UUID]time.Time)
 	ts.exit = make(chan struct{})
 
 	err := utils.InitTimeLocation(c.TimeLocation)

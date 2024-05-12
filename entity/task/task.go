@@ -38,10 +38,10 @@ type Task struct {
 	UpdateTimeUse    time.Time `json:"-" url:"-"`
 	UpdateID         string    `json:"updateID,omitempty" url:"updateID,omitempty"`
 	CreaterName      string    `json:"createrName,omitempty" url:"createrName,omitempty"`
-	CompanyCode      string    `json:"companyCode,omitempty" url:"companyCode,omitempty"`
 	Headers          string    `json:"headers,omitempty" url:"headers,omitempty"`
 	Level            int       `json:"level,omitempty" url:"level,omitempty"`
 	Lock             string    `json:"-" url:"-"`
+	// Email            string    `json:"-" url:"-"`
 }
 
 // ToDBTaskModel 将task实体转换为DBTask数据库模型。
@@ -132,8 +132,6 @@ func FromDBTaskModel(d *model.DBTask) *Task {
 	t.PostType = d.PostType
 	t.CreaterName = d.CreaterName
 	t.Headers = d.Headers
+	// t.Email = d.Email
 	return t
 }
-
-
-func 

@@ -1,15 +1,23 @@
 package crontab
 
 import (
+	"encoding/json"
+	"fmt"
 	"gcrontab/constant"
+	"gcrontab/email"
 	"gcrontab/entity/task"
+	tasklog "gcrontab/entity/task_log"
 	taskRep "gcrontab/rep_service/task"
+	taskLogRep "gcrontab/rep_service/tasklog"
+	"log"
+	"net/http"
 
 	"gcrontab/custom"
 	"gcrontab/model"
 	"gcrontab/utils"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"os"
 	"runtime"
@@ -28,9 +36,10 @@ type taskScheduler struct {
 	// 参数
 	MaxGoroutine chan int
 	//  单位 ms
-	ScanInterval int
-	wg           sync.WaitGroup
-	exit         chan struct{}
+	DBScanInterval  int
+	MemScanInterval int
+	wg              sync.WaitGroup
+	exit            chan struct{}
 }
 
 // Stop 关闭调度
@@ -54,23 +63,22 @@ func unLockInMap(t *task.Task) error {
 }
 
 // ExecImmediately 立即执行
-func ExecImmediately(t *task.Task, tl *model.DBTaskLog) {
+func ExecImmediately(t *task.Task, tl *tasklog.TaskLog) {
 	ts.handler(t, tl)
 }
 
-// TODO: 改成例如2h内需要执行的甚至当天需要执行  然后根据时间排序？ 或者all go 然后time.after? add or update ？
-// TODO: 2h扫描有一次 然后内存保持维护排序 每秒扫描检查是否需要执行？如果nexttime 计算下如果还是这个周期内则修改完后继续加入队列 否则只落到db
-// 因为放弃使用所有go出去time.after 阻塞 而是每秒扫描时间排序  数据结构 map[id]entity 还有个[]time.Time 实现time sort 不用sort直接扫这样也方便修改
 func (ts *taskScheduler) schedulerStart() {
 	var deadline time.Time
+	var err error
 	tickerInDB := time.NewTicker(time.Duration(ts.ScanInterval) * time.Millisecond)
 	tickerInMem := time.NewTicker(1 * time.Second)
 	// idleTimeDuration := time.After(1 * time.Second)
 	for {
-		deadline := utils.Now().Add(time.Duration(ts.ScanInterval) * time.Millisecond)
-		tasks, err := taskRep.FindActiveTasks(deadline)
+		now := utils.Now()
+		deadline = utils.Now().Add(time.Duration(ts.ScanInterval) * time.Millisecond)
+		todo, err = taskRep.FindActiveTasks(deadline)
 		if err != nil {
-			// TODO:maybe notify
+			// TODO:是否需要通知
 			logger.WithTime(utils.Now()).Errorf("find active tasks failed:%v", err)
 		}
 		select {
@@ -88,63 +96,72 @@ func (ts *taskScheduler) schedulerStart() {
 		default:
 		}
 
-		for _, te := range tasks {
-			ts.MaxGoroutine <- 1
-			go func(t *task.Task) {
-				defer func() {
-					<-ts.MaxGoroutine
-					if err := recover(); err != nil {
-						buf := make([]byte, 2048)
-						n := runtime.Stack(buf, false)
-						logger.WithTime(utils.Now()).Errorf("handler task[%s] panic:%s", t.ID, string(buf[:n]))
-					}
-				}()
-				if !getLockInMap(t) {
-					logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] get Lock failed", t.ID.GetIDValue(), t.Name)
-					return
+		for {
+			if deadline.Before(utils.Now()) {
+				break
+			}
+			for _, te := range todo {
+				if te == nil {
+					continue
 				}
+				ts.MaxGoroutine <- 1
+				go func(t *task.Task) {
+					defer func() {
+						<-ts.MaxGoroutine
+						if err := recover(); err != nil {
+							buf := make([]byte, 2048)
+							n := runtime.Stack(buf, false)
+							logger.WithTime(utils.Now()).Errorf("handler task[%s] panic:%s", t.ID, string(buf[:n]))
+						}
+					}()
+					if !getLockInMap(t) {
+						logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] get Lock failed", t.ID.GetIDValue(), t.Name)
+						return
+					}
 
-				if !doubleCheck(now, t.ID) {
-					logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] double check failed", t.ID.GetIDValue(), t.Name)
-					err := unLockInMap(t)
+					if !doubleCheck(now, t.ID.GetIDValue()) {
+						logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] double check failed", t.ID.GetIDValue(), t.Name)
+						err := unLockInMap(t)
+						if err != nil {
+							logger.WithTime(utils.Now()).Errorf("unlock entity failed:%v entity:%v", err, t.ID)
+						}
+						return
+					}
+
+					defer func() {
+						err := unLockInMap(t)
+						if err != nil {
+							logger.WithTime(utils.Now()).Errorf("unlock entity failed:%v entity:%v", err, t.ID)
+						}
+					}()
+					execTime := utils.Now()
+					// 先记录日志
+					tl, err := saveTaskLog(t, execTime)
 					if err != nil {
-						logger.WithTime(utils.Now()).Errorf("unlock entity failed:%v entity:%v", err, t.ID)
+						logger.WithTime(utils.Now()).Errorf("sava task[%v] start exec log error:%v", t.ID, err)
+						return
 					}
-					return
-				}
+					logger.WithTime(utils.Now()).Infof("[%s]exec...", t.ID)
+					ts.handler(t, tl)
 
-				defer func() {
-					err := unLockInMap(t)
-					if err != nil {
-						logger.WithTime(utils.Now()).Errorf("unlock entity failed:%v entity:%v", err, t.ID)
-					}
-				}()
-				execTime := utils.Now()
-				// 先记录日志
-				tl, err := saveTaskLog(t, execTime)
-				if err != nil {
-					logger.WithTime(utils.Now()).Errorf("sava task[%v] start exec log error:%v", t.ID, err)
-					return
-				}
-				logger.WithTime(utils.Now()).Infof("[%s]exec...", t.ID)
-				ts.handler(t, tl)
-
-			}(te)
+				}(te)
+			}
+			<-tickerInMem.C
 		}
 		<-tickerInDB.C
 	}
 }
 
-func doubleCheck(now time.Time, id uuid.UUID) bool {
-	tnew, err := model.FindTaskByID(id)
+func doubleCheck(now time.Time, id string) bool {
+	tnew, err := model.FindTaskByID(uuid.MustParse(id))
 	if err != nil {
-		logger.WithTime(utils.Now()).Errorf("find task by id[%s] failed:%v", id.String(), err)
+		logger.WithTime(utils.Now()).Errorf("find task by id[%s] failed:%v", id, err)
 		return false
 	}
 	return tnew.NextRuntime.Before(now)
 }
 
-func (ts *taskScheduler) handler(t *model.DBTask, tl *model.DBTaskLog) {
+func (ts *taskScheduler) handler(t *task.Task, tl *tasklog.TaskLog) {
 	defer func() {
 		if err := recover(); err != nil {
 			buf := make([]byte, 2048)
@@ -155,17 +172,15 @@ func (ts *taskScheduler) handler(t *model.DBTask, tl *model.DBTaskLog) {
 	switch t.Protocol {
 	case constant.HTTPJOB:
 		httpHandler(t, tl)
-	// case constant.EXECJON:
-	// 	fallthrough
 	default:
 		logger.WithTime(utils.Now()).Errorf("not support this type of job[%s]", t.Command)
-		failHandler(tl, t)
+		protocolFailHandler(t, tl)
 
 	}
 
 }
 
-func saveTaskLog(t *model.DBTask, tm time.Time) (tl *model.DBTaskLog, err error) {
+func saveTaskLog(t *task.Task, tm time.Time) (tl *tasklog.TaskLog, err error) {
 	defer func() {
 		if errPanic := recover(); errPanic != nil {
 			buf := make([]byte, 2048)
@@ -175,19 +190,124 @@ func saveTaskLog(t *model.DBTask, tm time.Time) (tl *model.DBTaskLog, err error)
 		}
 	}()
 
-	tl = new(model.DBTaskLog)
+	tl = new(tasklog.TaskLog)
 	tl.TimeStamp = tm.UnixNano()
 	tl.TaskName = t.Name
-	tl.TaskID = t.ID
+	tl.TaskID = t.ID.GetIDValue()
 	tl.Status = constant.STATUSPROCE
 	tl.Command = t.Command
-	tl.StartTime = tm
+	tl.StartTime = tm.String()
+	tl.StartTimeT = tm
 	hostName, _ := os.Hostname()
 	tl.Host = hostName
-	err = model.InsertTaskLog(tl)
+	err = taskLogRep.SaveTaskLog(tl)
 	if err != nil {
 		logger.WithTime(utils.Now()).Errorf("save task_log failed:%v", err)
 	}
 
 	return
+}
+
+// TODO:协议不支持的不计日志不落库 只发邮件 ?是否需要重复记录不支持的任务类型
+func protocolFailHandler(t *task.Task, tl *tasklog.TaskLog) {
+	tl.ResultCode = -1
+	tl.Result = custom.ErrorUnSupportTaskProtocol.Error()
+
+	copy := *t
+
+	go func(t *task.Task) {
+		defer func() {
+			if err := recover(); err != nil {
+				buf := make([]byte, 2048)
+				n := runtime.Stack(buf, false)
+				log.Printf("%v handler task panic:%s", time.Now(), string(buf[:n]))
+			}
+		}()
+		emails, err := model.FindEmails()
+		if err != nil {
+			logrus.Errorf("taskID[%s] find  email addresses failed:%v", t.ID, err)
+			return
+		}
+		err = email.SendCrontabAlert(tl.ResultCode, tl.Result, t, tl.TimeStamp, emails)
+		if err != nil {
+			logrus.Errorf("taskID[%s] send crontab alert email[To:%s] failed:%v", t.ID, t.Email, err)
+		}
+
+	}(&copy)
+
+	t = nil
+
+}
+
+func httpHandler(t *task.Task, tl *tasklog.TaskLog) {
+	var res *ResponseWrapper
+	h := make(http.Header)
+
+	if t.Headers != "" {
+		err := json.Unmarshal([]byte(t.Headers), &h)
+		if err != nil {
+			logger.WithTime(utils.Now()).Errorf("task header unmarshal failed:%v,data:[%s]", err, t.Headers)
+		}
+	}
+
+	switch t.HTTPMethod {
+	case constant.HTTPMETHODGET:
+		res = Get(t.Command, t.Expired_time, &h)
+	case constant.HTTPMETHODPOST:
+		switch t.PostType {
+		case constant.POSTJSON:
+			res = PostJSON(t.Command, t.Param, t.Expired_time, &h)
+		case constant.POSTFORM:
+			res = PostForm(t.Command, t.Param, t.Expired_time, &h)
+		default:
+			res = &ResponseWrapper{
+				StatusCode: http.StatusMethodNotAllowed,
+				Body:       fmt.Sprintf("unsupport post type:%s", t.PostType),
+				Start:      utils.Now(),
+				End:        utils.Now(),
+			}
+		}
+	}
+
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				buf := make([]byte, 2048)
+				n := runtime.Stack(buf, false)
+				log.Printf("%v handler task panic:%s", time.Now(), string(buf[:n]))
+			}
+		}()
+		emails, err := model.FindEmails()
+		if err != nil {
+			logger.WithTime(utils.Now()).Errorf("taskID[%s] find  email addresses failed:%v", t.ID, err)
+			return
+		}
+		err = email.SendCrontabAlert(res.StatusCode, res.Body, t, tl.TimeStamp, emails)
+		if err != nil {
+			logger.WithTime(utils.Now()).Errorf("taskID[%s] send crontab alert email[To:%s] failed:%v", t.ID, t.Email, err)
+		}
+	}()
+
+	updateTaskLog(res, tl)
+}
+
+func updateTaskLog(res *ResponseWrapper, tl *tasklog.TaskLog) {
+	defer func() {
+		if err := recover(); err != nil {
+			buf := make([]byte, 2048)
+			n := runtime.Stack(buf, false)
+			logger.WithTime(utils.Now()).Errorf("save TaskLog to DB panic:%v,%s", err, string(buf[:n]))
+		}
+	}()
+
+	tl.ResultCode = res.StatusCode
+	tl.Status = constant.STATUSSUCC
+	if res.StatusCode != 200 {
+		tl.Status = constant.STATUSFAIL
+	}
+	tl.Result = res.Body
+	tl.TotalTime = res.End.Sub(tl.StartTimeT).Nanoseconds() / 1e6
+	tl.EndTime = res.End.String()
+
+	// TODO：落库
 }

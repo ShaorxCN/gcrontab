@@ -102,9 +102,9 @@ type DBTask struct {
 	Param            string // 默认text好了
 	PostType         string `gorm:"type:varchar(24)"` // json or form
 	CreaterName      string `gorm:"type:varchar(255);index"`
-	FailNotify       string `gorm:"type:varchar(10)"`   // on or off
-	Email            string `gorm:"type:varchar(255)"`  // 通知邮箱
-	Headers          string `gorm:"type:varchar(2048)"` // header
+	FailNotify       string `gorm:"type:varchar(10)"` // on or off
+	// Email            string `gorm:"type:varchar(255)"`  // 通知邮箱
+	Headers string `gorm:"type:varchar(2048)"` // header
 }
 
 var taskTableName = new(DBTask).TableName()
@@ -179,7 +179,7 @@ func DeleteTaskByID(id uuid.UUID) error {
 func FindActiveTasks(now time.Time) ([]*DBTask, error) {
 	db := DB()
 	var res []*DBTask
-	err := db.Table(taskTableName).Where("next_runtime <= ? and Status = ?", now, constant.STATUSDEL).Find(&res).Error
+	err := db.Table(taskTableName).Where("next_runtime <= ? and Status = ?", now, constant.STATUSON).Find(&res).Error
 	return res, err
 }
 
