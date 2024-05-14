@@ -123,6 +123,7 @@ func FromDBTaskModel(d *model.DBTask) *Task {
 	t.Status = d.Status
 	t.Lock = d.Lock
 	t.NextRuntime = d.NextRuntime.In(utils.DefaultLocation).Format(constant.TIMELAYOUT)
+	t.NextRuntimeUse = *d.NextRuntime
 	if d.LastRuntime != nil {
 		t.LastRuntime = d.LastRuntime.In(utils.DefaultLocation).Format(constant.TIMELAYOUT)
 	}
@@ -132,6 +133,5 @@ func FromDBTaskModel(d *model.DBTask) *Task {
 	t.PostType = d.PostType
 	t.CreaterName = d.CreaterName
 	t.Headers = d.Headers
-	// t.Email = d.Email
 	return t
 }

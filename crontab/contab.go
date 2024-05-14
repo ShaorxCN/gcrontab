@@ -7,6 +7,7 @@ import (
 	"gcrontab/email"
 	"gcrontab/entity/task"
 	tasklog "gcrontab/entity/task_log"
+	"gcrontab/model/requestmodel"
 	taskRep "gcrontab/rep_service/task"
 	taskLogRep "gcrontab/rep_service/tasklog"
 	"log"
@@ -179,10 +180,14 @@ func (ts *taskScheduler) schedulerStart() {
 					logger.WithTime(utils.Now()).Infof("[%s]exec...", t.ID)
 					ts.handler(t, tl)
 
-					err = updateTask4Next(te, execTime)
+					nextTime, err := updateTask4Next(te, execTime)
 					if err != nil {
 						logger.WithTime(utils.Now()).Errorf("update task[%s] to next failed :%v", t.ID, err)
 						return
+					}
+
+					if utils.IsBeforeOrEq(nextTime, deadline) {
+						ts.updateTaskChan <- te
 					}
 					logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
 
@@ -210,7 +215,7 @@ func doubleCheck(now time.Time, id string) bool {
 		logger.WithTime(utils.Now()).Errorf("find task by id[%s] failed:%v", id, err)
 		return false
 	}
-	return tnew.NextRuntime.Before(now)
+	return utils.IsBeforeOrEq(*tnew.NextRuntime, now)
 }
 
 func (ts *taskScheduler) handler(t *task.Task, tl *tasklog.TaskLog) {
@@ -323,25 +328,27 @@ func httpHandler(t *task.Task, tl *tasklog.TaskLog) {
 		}
 	}
 
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				buf := make([]byte, 2048)
-				n := runtime.Stack(buf, false)
-				log.Printf("%v handler task panic:%s", time.Now(), string(buf[:n]))
-			}
-		}()
+	if res.StatusCode != http.StatusOK {
 		emails, err := model.FindEmails()
 		if err != nil {
 			logger.WithTime(utils.Now()).Errorf("taskID[%s] find  email addresses failed:%v", t.ID, err)
 			return
 		}
-		err = email.SendCrontabAlert(res.StatusCode, res.Body, t, tl.TimeStamp, emails)
-		if err != nil {
-			logger.WithTime(utils.Now()).Errorf("taskID[%s] send crontab alert email[To:%s] failed:%v", t.ID, t.Email, err)
-		}
-	}()
+		go func() {
+			defer func() {
+				if err := recover(); err != nil {
+					buf := make([]byte, 2048)
+					n := runtime.Stack(buf, false)
+					log.Printf("%v handler task panic:%s", time.Now(), string(buf[:n]))
+				}
+			}()
 
+			err = email.SendCrontabAlert(res.StatusCode, res.Body, t, tl.TimeStamp, emails)
+			if err != nil {
+				logger.WithTime(utils.Now()).Errorf("taskID[%s] send crontab alert email[To:%s] failed:%v", t.ID, emails, err)
+			}
+		}()
+	}
 	updateTaskLog(res, tl)
 }
 
@@ -378,9 +385,9 @@ func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
 	param := &requestmodel.ModifyTask{}
 
 	param.LastRuntimeUse = exec
-	param.NextRuntimeUse = utils.GetNextTimeAfterNow(*t.NextRuntime, t.IntervalDuration, t.UnitOfInterval).In(utils.DefaultLocation)
+	param.NextRuntimeUse = utils.GetNextTimeAfterNow(t.NextRuntimeUse, t.IntervalDuration, t.UnitOfInterval).In(utils.DefaultLocation)
 	param.NextRuntime = param.NextRuntimeUse.Format(constant.TIMELAYOUT)
 	param.UpdateFlag = 0
 
-	return model.ModifyTaskTimeByID(t.ID, param)
+	return param.NextRuntimeUse, model.ModifyTaskTimeByID(t.ID, param)
 }

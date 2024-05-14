@@ -109,3 +109,8 @@ func getInterval(duration int, unit string) (t time.Duration) {
 	}
 	return
 }
+
+// IsBeforeOrEq 返回a时间是否在b时间之前或等于
+func IsBeforeOrEq(a, b time.Time) bool {
+	return a.Compare(b) != 1
+}
