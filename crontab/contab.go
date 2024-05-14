@@ -40,16 +40,24 @@ type taskScheduler struct {
 	MemScanInterval int
 	wg              sync.WaitGroup
 	exit            chan struct{}
+	// 更新之后需要在该周期内执行的程序channel
+	updateTaskChan chan *task.Task
+	// 更新继续执行的任务数组
+	updateExecTask []*task.Task
+	// 记录todo中任务uuid和index的映射
+	taskUUIDMap map[string]int
 }
 
 // Stop 关闭调度
 func (ts *taskScheduler) Stop() {
 	close(ts.exit)
+	close(ts.updateTaskChan)
 	ts.wg.Wait()
 }
 
 func (ts *taskScheduler) Start() {
 	ts.wg.Add(1)
+	go ts.dealUpdateTask()
 	go ts.schedulerStart()
 }
 
@@ -67,15 +75,42 @@ func ExecImmediately(t *task.Task, tl *tasklog.TaskLog) {
 	ts.handler(t, tl)
 }
 
+func (ts *taskScheduler) dealUpdateTask() {
+	defer func() {
+		if err := recover(); err != nil {
+			buf := make([]byte, 2048)
+			n := runtime.Stack(buf, false)
+			logger.WithTime(utils.Now()).Errorf("handler updateTaskChan panic:%s", string(buf[:n]))
+		}
+	}()
+
+	var ok bool
+	var t *task.Task
+	for {
+		if t, ok = <-ts.updateTaskChan; ok {
+			ts.updateExecTask = append(ts.updateExecTask, t)
+		} else {
+			return
+		}
+	}
+}
+
 func (ts *taskScheduler) schedulerStart() {
+	defer func() {
+		if err := recover(); err != nil {
+			buf := make([]byte, 2048)
+			n := runtime.Stack(buf, false)
+			logger.WithTime(utils.Now()).Errorf("handler crontab panic:%s", string(buf[:n]))
+		}
+	}()
 	var deadline time.Time
 	var err error
-	tickerInDB := time.NewTicker(time.Duration(ts.ScanInterval) * time.Millisecond)
+	tickerInDB := time.NewTicker(time.Duration(ts.DBScanInterval) * time.Millisecond)
 	tickerInMem := time.NewTicker(1 * time.Second)
 	// idleTimeDuration := time.After(1 * time.Second)
 	for {
 		now := utils.Now()
-		deadline = utils.Now().Add(time.Duration(ts.ScanInterval) * time.Millisecond)
+		deadline = utils.Now().Add(time.Duration(ts.DBScanInterval) * time.Millisecond)
 		todo, err = taskRep.FindActiveTasks(deadline)
 		if err != nil {
 			// TODO:是否需要通知
@@ -144,9 +179,26 @@ func (ts *taskScheduler) schedulerStart() {
 					logger.WithTime(utils.Now()).Infof("[%s]exec...", t.ID)
 					ts.handler(t, tl)
 
+					err = updateTask4Next(te, execTime)
+					if err != nil {
+						logger.WithTime(utils.Now()).Errorf("update task[%s] to next failed :%v", t.ID, err)
+						return
+					}
+					logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
+
 				}(te)
 			}
 			<-tickerInMem.C
+			for _, v := range ts.updateExecTask {
+				if v != nil {
+					if index, ok := ts.taskUUIDMap[v.ID.GetIDValue()]; ok {
+						todo[index] = v
+					} else {
+						todo = append(todo, v)
+						ts.taskUUIDMap[v.ID.GetIDValue()] = len(todo) - 1
+					}
+				}
+			}
 		}
 		<-tickerInDB.C
 	}
@@ -223,6 +275,8 @@ func protocolFailHandler(t *task.Task, tl *tasklog.TaskLog) {
 				log.Printf("%v handler task panic:%s", time.Now(), string(buf[:n]))
 			}
 		}()
+
+		// 统一设置的通知email
 		emails, err := model.FindEmails()
 		if err != nil {
 			logrus.Errorf("taskID[%s] find  email addresses failed:%v", t.ID, err)
@@ -230,7 +284,7 @@ func protocolFailHandler(t *task.Task, tl *tasklog.TaskLog) {
 		}
 		err = email.SendCrontabAlert(tl.ResultCode, tl.Result, t, tl.TimeStamp, emails)
 		if err != nil {
-			logrus.Errorf("taskID[%s] send crontab alert email[To:%s] failed:%v", t.ID, t.Email, err)
+			logrus.Errorf("taskID[%s] send crontab alert email[To:%s] failed:%v", t.ID, emails, err)
 		}
 
 	}(&copy)
@@ -310,4 +364,23 @@ func updateTaskLog(res *ResponseWrapper, tl *tasklog.TaskLog) {
 	tl.EndTime = res.End.String()
 
 	// TODO：落库
+}
+
+func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			buf := make([]byte, 2048)
+			n := runtime.Stack(buf, false)
+			logger.WithTime(utils.Now()).Errorf("modify task to nextExec panic:%s", string(buf[:n]))
+		}
+	}()
+
+	param := &requestmodel.ModifyTask{}
+
+	param.LastRuntimeUse = exec
+	param.NextRuntimeUse = utils.GetNextTimeAfterNow(*t.NextRuntime, t.IntervalDuration, t.UnitOfInterval).In(utils.DefaultLocation)
+	param.NextRuntime = param.NextRuntimeUse.Format(constant.TIMELAYOUT)
+	param.UpdateFlag = 0
+
+	return model.ModifyTaskTimeByID(t.ID, param)
 }

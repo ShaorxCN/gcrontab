@@ -60,6 +60,9 @@ func (c *CrontabConfig) Init() error {
 	ts.MaxGoroutine = make(chan int, c.MaxGoroutine)
 	ts.DBScanInterval = c.DBInterval
 	ts.MemScanInterval = c.MemInterval
+	ts.updateTaskChan = make(chan *task.Task, 30)
+	ts.updateExecTask = make([]*task.Task, 0, 100)
+	ts.taskUUIDMap = make(map[string]int)
 	imme_tasks = make(chan *task.Task, c.RunSize)
 	ts.exit = make(chan struct{})
 
