@@ -9,7 +9,7 @@ import (
 	tasklog "gcrontab/entity/task_log"
 	"gcrontab/model/requestmodel"
 	taskRep "gcrontab/rep_service/task"
-	taskLogRep "gcrontab/rep_service/tasklog"
+	taskLogRep "gcrontab/rep_service/task_log"
 	"log"
 	"net/http"
 
@@ -136,6 +136,7 @@ func (ts *taskScheduler) schedulerStart() {
 			if deadline.Before(utils.Now()) {
 				break
 			}
+			// 1.22 新的loopvar 每次都会重新声明定义te
 			for _, te := range todo {
 				if te == nil {
 					continue
@@ -370,13 +371,10 @@ func updateTaskLog(res *ResponseWrapper, tl *tasklog.TaskLog) {
 	tl.TotalTime = res.End.Sub(tl.StartTimeT).Nanoseconds() / 1e6
 	tl.EndTime = res.End.String()
 
-	
-	err :=  taskLogRep.UpdateTaskLog(tl)
+	err := taskLogRep.UpdateTaskLog(tl)
 	if err != nil {
 		logger.WithTime(utils.Now()).Errorf("update task_log failed:%v", err)
 	}
-
-
 }
 
 func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
@@ -395,5 +393,9 @@ func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
 	param.NextRuntime = param.NextRuntimeUse.Format(constant.TIMELAYOUT)
 	param.UpdateFlag = 0
 
-	return param.NextRuntimeUse, model.ModifyTaskTimeByID(t.ID, param)
+	taskID, err := uuid.Parse(t.ID.GetIDValue())
+	if err != nil {
+		return param.NextRuntimeUse, err
+	}
+	return param.NextRuntimeUse, taskLogRep.ModifyTaskTimeByID(taskID, param)
 }

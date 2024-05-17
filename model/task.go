@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"gcrontab/constant"
+	"gcrontab/model/requestmodel"
 	"time"
 
 	"github.com/google/uuid"
@@ -183,14 +184,23 @@ func FindActiveTasks(now time.Time) ([]*DBTask, error) {
 	return res, err
 }
 
-// FindTaskByCode 根据code 查找Task 状态不为删除：del
-func FindTaskByCode(code string) (*DBTask, error) {
+// ModifyTaskTimeByID 根据ID 修改任务时间
+func ModifyTaskTimeByID(id uuid.UUID, param *requestmodel.ModifyTask) error {
 	db := DB()
-	dbTask := &DBTask{}
-	err := db.Model(dbTask).Where("task_code = ? and status != ?", code, constant.STATUSDEL).First(dbTask).Error
-	// 这边不管什么状态都会去执行  待迭代
-	if err != nil {
-		return nil, err
+	m := make(map[string]interface{})
+
+	if !param.NextRuntimeUse.IsZero() {
+		m["next_runtime"] = param.NextRuntimeUse
 	}
-	return dbTask, nil
+
+	if !param.LastRuntimeUse.IsZero() {
+		m["last_runtime"] = param.LastRuntimeUse
+	}
+
+	if !param.UpdateTimeUse.IsZero() {
+		m["update_at"] = param.UpdateTimeUse
+	}
+
+	return db.Table(taskTableName).Where("id = ?", id).Updates(m).Error
+
 }

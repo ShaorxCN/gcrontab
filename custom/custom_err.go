@@ -21,18 +21,6 @@ const (
 )
 
 var (
-	// ErroEntityKeyParam   = errors.New("neither idValue or tpValue can be empty")
-	// ErrorInvalideAccessToken = errors.New("unauthorized")
-	// ErrorSaveToDBFailed      = errors.New("save to DB Failed")
-	// ErrorInvalideRequest     = errors.New("invalide request")
-	// ErrorCalculateTimeFailed = errors.New("calculate NextRuntime failed")
-	// ErrorEntityLocked        = errors.New("system is busy,please retry later")
-	// ErrorRecordNotFound      = errors.New("record not found")
-	// ErrorLoginFailed         = errors.New("invalide user")
-	// ErrorInternalServerError = errors.New("internal server error")
-	// ErrorRecordExist         = errors.New("source exists")
-	// ErrorOriginPasswordError = errors.New("origin password error")
-
 	ErroEntityKeyParam         = errors.New("neither idValue or tpValue can be empty")
 	ErrorInvalideAccessToken   = errors.New("登陆状态失效")
 	ErrorSaveToDBFailed        = errors.New("操作数据库/redis失败")
