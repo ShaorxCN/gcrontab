@@ -1,9 +1,6 @@
 package requestmodel
 
 import (
-	"crontab-go/security"
-	"crontab-go/utils"
-	"fmt"
 	"time"
 )
 
@@ -27,23 +24,4 @@ type ModifyTask struct {
 	CompanyCode      string    `json:"companyCode,omitempty" url:"companyCode,omitempty"`
 	Headers          string    `json:"headers,omitempty" url:"headers,omitempty"`
 	Sign             string    `json:"sign,omitempty" url:"-" `
-	// Email          string    `json:"email,omitempty"`
-	// FailNotify     string    `json:"FailNotify,omitempty"`
-}
-
-// CheckSign 验证签名
-func (r *ModifyTask) CheckSign(secret string) error {
-	originString, err := utils.Query(r)
-	if err != nil {
-		return err
-	}
-
-	toHash := fmt.Sprintf("%s%s", originString.String(), secret)
-	sign := security.HashSha256(toHash)
-
-	if sign != r.Sign {
-		return fmt.Errorf("check sign error,the expect sign is %s, but get: %s,the content to sign is %s", sign, r.Sign, originString.String())
-	}
-
-	return nil
 }
