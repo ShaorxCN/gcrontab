@@ -13,3 +13,12 @@ func SaveTaskLog(tl *tle.TaskLog) error {
 
 	return model.InsertTaskLog(dbtl)
 }
+
+func UpdateTaskLog(tl *tle.TaskLog) error {
+	dbtl, err := tl.ToDBTaskLogModel()
+	if err != nil {
+		return err
+	}
+
+	return model.UpdateTaskLog(dbtl)
+}

@@ -370,7 +370,13 @@ func updateTaskLog(res *ResponseWrapper, tl *tasklog.TaskLog) {
 	tl.TotalTime = res.End.Sub(tl.StartTimeT).Nanoseconds() / 1e6
 	tl.EndTime = res.End.String()
 
-	// TODO：落库
+	
+	err :=  taskLogRep.UpdateTaskLog(tl)
+	if err != nil {
+		logger.WithTime(utils.Now()).Errorf("update task_log failed:%v", err)
+	}
+
+
 }
 
 func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
