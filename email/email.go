@@ -30,5 +30,4 @@ func SendCrontabAlert(code int, body string, t *task.Task, timeStamp int64, emai
 	em.From = user
 	em.HTML = []byte(content)
 	return em.SendWithTLS(addr, auth, tlsConfig)
-
 }

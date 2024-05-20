@@ -1,6 +1,10 @@
 package web
 
 import (
+	"gcrontab/web/middleware"
+
+	"gcrontab/web/controller"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -27,6 +31,14 @@ func (g *GinConfig) Init() (err error) {
 	if g.Mode != "" {
 		gin.SetMode(g.Mode)
 	}
+
+	logger := logrus.StandardLogger()
+	r.Use(
+		middleware.Logger(logger),
+		middleware.Recovery(logger),
+	)
+
+	controller.AddTaskRouter(r)
 
 	return r.Run(g.Host + ":" + g.Port)
 }
