@@ -50,4 +50,5 @@ func (g *GinConfig) Restart() error {
 
 // Stop 停止服务
 func (g *GinConfig) Stop() {
+	logrus.Warn("close gin server...")
 }

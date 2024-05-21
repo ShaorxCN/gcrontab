@@ -64,4 +64,5 @@ func (c *Config) Restart() error {
 // Stop 停止
 func (c *Config) Stop() {
 	initDone()
+	logrus.Warn("close email end...")
 }

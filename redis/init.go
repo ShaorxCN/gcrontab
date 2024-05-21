@@ -100,8 +100,10 @@ func (c *Config) Restart() error {
 
 // Stop 释放pool
 func (c *Config) Stop() {
+	logrus.Warn("close db Connections...")
 	initDone()
 	redisPool.pool.Close()
+	logrus.Warn("close redis Connetctions end...")
 }
 
 // GetConn 获取一个连接

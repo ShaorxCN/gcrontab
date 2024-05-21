@@ -96,6 +96,7 @@ func (ts *taskScheduler) dealUpdateTask() {
 	}
 }
 
+// TODO: db扫描间隔和stop逻辑冲突
 func (ts *taskScheduler) schedulerStart() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -141,6 +142,8 @@ func (ts *taskScheduler) schedulerStart() {
 				if te == nil {
 					continue
 				}
+
+				// newT:= te
 				ts.MaxGoroutine <- 1
 				go func(t *task.Task) {
 					defer func() {
@@ -192,7 +195,7 @@ func (ts *taskScheduler) schedulerStart() {
 					}
 					logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
 
-				}(te)
+				}(te) // (newT)
 			}
 			<-tickerInMem.C
 			for _, v := range ts.updateExecTask {
