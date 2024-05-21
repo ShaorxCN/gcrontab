@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,7 +39,7 @@ func (s Task) DeleteTask(ctx *gin.Context) {
 
 // FindTaskByID 根据id 查找任务
 func (s Task) FindTaskByID(ctx *gin.Context) {
-
+	ctx.AbortWithStatusJSON(http.StatusOK, `{"name":"gkond"}`)
 }
 
 func (s Task) FindTasks(ctx *gin.Context) {

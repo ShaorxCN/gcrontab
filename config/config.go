@@ -64,6 +64,7 @@ func (cm *Management) Stop() {
 func (cm *Management) loadConfigFile() error {
 	filePath := flag.String("cf", "./config.json", "config path")
 	flag.Parse()
+	logrus.Infoln("read local config  file", *filePath)
 	data, err := os.ReadFile(*filePath)
 	if err != nil {
 		return err

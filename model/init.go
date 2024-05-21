@@ -113,6 +113,8 @@ func restartHandler(cf config.Configer, gdb *globalDB) error {
 func Models() []interface{} {
 	return []interface{}{
 		&DBUser{},
+		&DBTask{},
+		&DBTaskLog{},
 	}
 }
 

@@ -7,28 +7,28 @@ import (
 )
 
 type entry struct {
-	key   interface{}
+	key   string
 	value interface{}
 }
 
-var ErrCreate = errors.New("maxSize must be a positive num")
+var ErrCreate = errors.New("cap must be a positive num")
 
 type LruCache struct {
-	cap   int // 0 不设置上限
+	cap   int
 	ll    *list.List
 	mu    sync.RWMutex
-	cache map[interface{}]*list.Element
+	cache map[string]*list.Element
 }
 
 func NewLruCache(cap int) (*LruCache, error) {
-	if cap < 0 {
+	if cap <= 0 {
 		return nil, ErrCreate
 	}
 
 	return &LruCache{
 		cap:   cap,
 		ll:    list.New(),
-		cache: make(map[interface{}]*list.Element),
+		cache: make(map[string]*list.Element),
 	}, nil
 }
 
@@ -43,13 +43,13 @@ func (l *LruCache) removeOldest() {
 
 }
 
-func (l *LruCache) Set(key, value interface{}) {
+func (l *LruCache) Set(key string, value interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	if l.cache == nil {
 		l.ll = list.New()
-		l.cache = make(map[interface{}]*list.Element)
+		l.cache = make(map[string]*list.Element)
 	}
 
 	if e, ok := l.cache[key]; ok {
@@ -66,7 +66,7 @@ func (l *LruCache) Set(key, value interface{}) {
 	}
 }
 
-func (l *LruCache) Get(key interface{}) (value interface{}, ok bool) {
+func (l *LruCache) Get(key string) (value interface{}, ok bool) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
@@ -99,7 +99,7 @@ func (l *LruCache) remove(e *list.Element) {
 	l.ll.Remove(e)
 }
 
-func (l *LruCache) Remove(key interface{}) {
+func (l *LruCache) Remove(key string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
