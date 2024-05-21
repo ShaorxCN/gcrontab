@@ -1,6 +1,7 @@
 package crontab
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"gcrontab/constant"
@@ -28,12 +29,14 @@ import (
 
 var (
 	ts *taskScheduler
-	// 立即运行的channel  会更新下次执行时间并且记录user host等信息。
+	// imme_tasks 立即运行的channel  会更新下次执行时间并且记录user host等信息。
 	imme_tasks chan *task.Task
 	todo       []*task.Task
 )
 
 type taskScheduler struct {
+	ctx    context.Context
+	cancel context.CancelFunc
 	// 参数
 	MaxGoroutine chan int
 	//  单位 ms
@@ -53,6 +56,7 @@ type taskScheduler struct {
 func (ts *taskScheduler) Stop() {
 	close(ts.exit)
 	close(ts.updateTaskChan)
+	ts.cancel()
 	ts.wg.Wait()
 }
 
@@ -96,7 +100,6 @@ func (ts *taskScheduler) dealUpdateTask() {
 	}
 }
 
-// TODO: db扫描间隔和stop逻辑冲突
 func (ts *taskScheduler) schedulerStart() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -111,13 +114,6 @@ func (ts *taskScheduler) schedulerStart() {
 	tickerInMem := time.NewTicker(1 * time.Second)
 	// idleTimeDuration := time.After(1 * time.Second)
 	for {
-		now := utils.Now()
-		deadline = utils.Now().Add(time.Duration(ts.DBScanInterval) * time.Millisecond)
-		todo, err = taskRep.FindActiveTasks(deadline)
-		if err != nil {
-			// TODO:是否需要通知
-			logger.WithTime(utils.Now()).Errorf("find active tasks failed:%v", err)
-		}
 		select {
 		case <-ts.exit:
 			for {
@@ -132,18 +128,31 @@ func (ts *taskScheduler) schedulerStart() {
 			}
 		default:
 		}
+		now := utils.Now()
+		deadline = utils.Now().Add(time.Duration(ts.DBScanInterval) * time.Millisecond)
+		todo, err = taskRep.FindActiveTasks(deadline)
+		if err != nil {
+			// TODO:是否需要通知
+			logger.WithTime(utils.Now()).Errorf("find active tasks failed:%v", err)
+		}
 
+	memScan:
 		for {
 			if deadline.Before(utils.Now()) {
 				break
 			}
-			// 1.22 新的loopvar 每次都会重新声明定义te
+
+			select {
+			case <-ts.ctx.Done():
+				break memScan
+			default:
+			}
+			// 1.22 新的loopvar 每次都会重新声明定义te 不需要重新传
 			for _, te := range todo {
 				if te == nil {
 					continue
 				}
 
-				// newT:= te
 				ts.MaxGoroutine <- 1
 				go func(t *task.Task) {
 					defer func() {
@@ -191,12 +200,13 @@ func (ts *taskScheduler) schedulerStart() {
 					}
 
 					if utils.IsBeforeOrEq(nextTime, deadline) {
-						ts.updateTaskChan <- te
+						ts.updateTaskChan <- t
 					}
 					logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
 
-				}(te) // (newT)
+				}(te)
 			}
+
 			<-tickerInMem.C
 			for _, v := range ts.updateExecTask {
 				if v != nil {
@@ -209,7 +219,12 @@ func (ts *taskScheduler) schedulerStart() {
 				}
 			}
 		}
-		<-tickerInDB.C
+
+		select {
+		case <-tickerInDB.C:
+		case <-ts.ctx.Done():
+			logrus.Infoln("cancel crontab.....")
+		}
 	}
 }
 

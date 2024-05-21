@@ -1,6 +1,7 @@
 package crontab
 
 import (
+	"context"
 	"gcrontab/entity/task"
 	"gcrontab/utils"
 
@@ -65,6 +66,7 @@ func (c *CrontabConfig) Init() error {
 	ts.taskUUIDMap = make(map[string]int)
 	imme_tasks = make(chan *task.Task, c.RunSize)
 	ts.exit = make(chan struct{})
+	ts.ctx, ts.cancel = context.WithCancel(context.Background())
 
 	err := utils.InitTimeLocation(c.TimeLocation)
 	if err != nil {

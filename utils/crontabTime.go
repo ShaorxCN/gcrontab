@@ -26,7 +26,8 @@ var (
 // InitTimeLocation 初始化时区 这里默认机器时间 UTC不是默认值
 func InitTimeLocation(location string) error {
 	if location == "" {
-		location = "Local"
+		DefaultLocation = time.Local
+		return nil
 	}
 	var err error
 	DefaultLocation, err = time.LoadLocation(location)
