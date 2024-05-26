@@ -9,8 +9,8 @@ import (
 	"gcrontab/entity/task"
 	tasklog "gcrontab/entity/task_log"
 	"gcrontab/model/requestmodel"
-	taskRep "gcrontab/rep_service/task"
-	taskLogRep "gcrontab/rep_service/task_log"
+	taskRep "gcrontab/rep/task"
+	taskLogRep "gcrontab/rep/task_log"
 	"log"
 	"net/http"
 

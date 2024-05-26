@@ -1,9 +1,16 @@
 package controller
 
 import (
+	"gcrontab/custom"
+	"gcrontab/entity/task"
+	ts "gcrontab/service/task"
+	"gcrontab/utils"
+	"gcrontab/web/response"
+	"gcrontab/web/validate"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // Task 用来实现用户的 rest 接口。
@@ -21,6 +28,35 @@ func AddTaskRouter(e *gin.Engine) {
 
 // CreateTask 创建一个任务。
 func (s Task) CreateTask(ctx *gin.Context) {
+	in := new(task.Task)
+	err := ctx.BindJSON(in)
+	if err != nil {
+		logrus.WithError(err).Error()
+		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusBadRequest, custom.ErrorInvalideRequest.Error()))
+		return
+	}
+
+	err = validate.CheckCreateTaskRequest(in)
+	if err != nil {
+		logrus.Errorf("checkRquestFailed:%v", err)
+		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.ParamError, err.Error()))
+		return
+	}
+
+	tasks := []*task.Task{in}
+	taskService := ts.NewTaskService(utils.NewServiceContext(ctx), tasks)
+	err = taskService.CreateTask()
+
+	if err != nil {
+		if err == custom.ErrorRecordExist {
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.RecordExist, err.Error()))
+			return
+		}
+		logrus.Errorf("add task  failed:%v", err)
+		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, err.Error()))
+	} else {
+		ctx.JSON(http.StatusOK, response.NewSuccessBaseResponse())
+	}
 
 }
 

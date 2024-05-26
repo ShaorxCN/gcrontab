@@ -24,7 +24,7 @@ func NewSuccessBaseResponse() *BaseResponse {
 	}
 }
 
-// NewBusinessFailedBaseResponse 失败应答构造
+// NewBusinessFailedBaseResponse 失败应答构造 服务器ok 但是业务逻辑上讲错误
 func NewBusinessFailedBaseResponse(subCode, subMsg string) *BaseResponse {
 	return &BaseResponse{
 		Code:    "000",
