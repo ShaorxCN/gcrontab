@@ -16,9 +16,12 @@ func FindActiveTasks(now time.Time) ([]*task.Task, error) {
 	}
 
 	ts := make([]*task.Task, len(mts))
-
+	var te *task.Task
 	for i, t := range mts {
-		te := task.FromDBTaskModel(t)
+		if te, err = task.FromDBTaskModel(t); err != nil {
+			logrus.Errorf("%v task status error:%v\n", t.ID, t.Status)
+			return nil, err
+		}
 		ts[i] = te
 	}
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"gcrontab/config"
 	"gcrontab/crontab"
-	"gcrontab/email"
 	"gcrontab/model"
 	"gcrontab/redis"
 	"gcrontab/utils"
@@ -43,7 +42,7 @@ func main() {
 	cm.Register("gin_config", &web.GinConfig{})
 	cm.Register("crontab_config", &crontab.CrontabConfig{})
 	cm.Register("redis_config", &redis.Config{})
-	cm.Register("email_config", &email.Config{})
+	// cm.Register("email_config", &email.Config{})
 	err := cm.Init()
 	if err != nil {
 		logrus.Fatalf("init config failed, err: %v", err)
@@ -62,10 +61,10 @@ func main() {
 		logrus.Fatalf("could not connect to the db:%s", err.Error())
 	}
 
-	err = cm.Configs["email_config"].Init()
-	if err != nil {
-		logrus.Fatalf("could not connect to the email:%s", err.Error())
-	}
+	// err = cm.Configs["email_config"].Init()
+	// if err != nil {
+	// 	logrus.Fatalf("could not connect to the email:%s", err.Error())
+	// }
 	err = model.AutoMigrate()
 	if err != nil {
 		logrus.Fatalf("create tables failed:%s", err.Error())

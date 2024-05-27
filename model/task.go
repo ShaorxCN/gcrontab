@@ -83,7 +83,7 @@ func task_buildQuery(p *TaskParams) (string, []interface{}) {
 // DBTask 是任务的数据库模型。
 type DBTask struct {
 	Base
-	Name             string `gorm:"index;not null;type:varchar(1024)"`
+	Name             string `gorm:"unique_index;not null;type:varchar(1024)"`
 	IntervalDuration int    `gorm:"not null"`                  // 频率
 	UnitOfInterval   string `gorm:"not null;type:varchar(32)"` // 频率单位 例如 天 周等
 	Protocol         string `gorm:"type:varchar(32)"`          // HTTP / COMMAND
@@ -93,8 +93,7 @@ type DBTask struct {
 	RetryTimes       int    `gorm:"type:integer"` // 重试次数 默认为0 不重试
 	RetryInterval    int    `gorm:"type:integer"` // 重试间隔 单位ms
 	Remark           string `gorm:"type:varchar(1024)"`
-	Status           string `gorm:"type:varchar(32);index"`
-	Lock             string `gorm:"type:varchar(256)"`
+	Status           int    `gorm:"type:smallint;index"`
 	NextRuntime      *time.Time
 	LastRuntime      *time.Time
 	Level            int    `gorm:"type:integer"` // 重要程度
@@ -180,7 +179,7 @@ func DeleteTaskByID(id uuid.UUID) error {
 func FindActiveTasks(now time.Time) ([]*DBTask, error) {
 	db := DB()
 	var res []*DBTask
-	err := db.Table(taskTableName).Where("next_runtime <= ? and Status = ?", now, constant.STATUSON).Find(&res).Error
+	err := db.Table(taskTableName).Where("next_runtime <= ? and Status = ?", now, constant.STATUSONDB).Find(&res).Error
 	return res, err
 }
 

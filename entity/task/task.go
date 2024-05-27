@@ -1,6 +1,7 @@
 package task
 
 import (
+	"errors"
 	"gcrontab/constant"
 	"gcrontab/entity"
 	entitier "gcrontab/interface/entity"
@@ -40,8 +41,6 @@ type Task struct {
 	CreaterName      string    `json:"createrName,omitempty" url:"createrName,omitempty"`
 	Headers          string    `json:"headers,omitempty" url:"headers,omitempty"`
 	Level            int       `json:"level,omitempty" url:"level,omitempty"`
-	Lock             string    `json:"-" url:"-"`
-	// Email            string    `json:"-" url:"-"`
 }
 
 // ToDBTaskModel 将task实体转换为DBTask数据库模型。
@@ -91,8 +90,16 @@ func (t *Task) ToDBTaskModel() (*model.DBTask, error) {
 	d.Expired_time = t.Expired_time
 
 	d.Remark = t.Remark
-	d.Status = t.Status
-	d.Lock = t.Lock
+
+	switch t.Status {
+	case constant.STATUSON:
+		d.Status = constant.STATUSONDB
+	case constant.STATUSOFF:
+		d.Status = constant.STATUSOFFDB
+	default:
+		return nil, errors.New("status error")
+	}
+
 	d.NextRuntime = &next
 	d.Level = t.Level
 	d.UpdateID = t.UpdateID
@@ -104,7 +111,7 @@ func (t *Task) ToDBTaskModel() (*model.DBTask, error) {
 }
 
 // FromDBTaskModel 将任务Model转为实体。
-func FromDBTaskModel(d *model.DBTask) *Task {
+func FromDBTaskModel(d *model.DBTask) (*Task, error) {
 	t := new(Task)
 	t.ID = entitier.NewEntityKey(d.ID.String(), TaskEntityType)
 	t.CreateAt = d.CreateAt.In(utils.DefaultLocation).Format(constant.TIMELAYOUT)
@@ -120,8 +127,15 @@ func FromDBTaskModel(d *model.DBTask) *Task {
 	t.HTTPMethod = d.HTTPMethod
 
 	t.Remark = d.Remark
-	t.Status = d.Status
-	t.Lock = d.Lock
+
+	switch d.Status {
+	case constant.STATUSONDB:
+		t.Status = constant.STATUSON
+	case constant.STATUSOFFDB:
+		t.Status = constant.STATUSOFF
+	default:
+		return nil, errors.New("status error")
+	}
 	t.NextRuntime = d.NextRuntime.In(utils.DefaultLocation).Format(constant.TIMELAYOUT)
 	t.NextRuntimeUse = *d.NextRuntime
 	if d.LastRuntime != nil {
@@ -133,5 +147,5 @@ func FromDBTaskModel(d *model.DBTask) *Task {
 	t.PostType = d.PostType
 	t.CreaterName = d.CreaterName
 	t.Headers = d.Headers
-	return t
+	return t, nil
 }

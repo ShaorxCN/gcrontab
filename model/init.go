@@ -120,7 +120,8 @@ func Models() []interface{} {
 
 // AutoMigrate 自动更新数据库表结构。
 func AutoMigrate() error {
-	err := DB().AutoMigrate(Models()...).Error
+	logrus.Info("auto migrate....")
+	err := DB().Debug().AutoMigrate(Models()...).Error
 	if err != nil {
 		return err
 	}
@@ -154,6 +155,7 @@ func connectDB(cf interface{}) (*gorm.DB, error) {
 		return gormDB, err
 	}
 	logrus.WithFields(logrus.Fields{"db_name": name}).Info("DB connect successful.")
+
 	gormDB.DB().SetMaxIdleConns(8)
 	gormDB.DB().SetMaxOpenConns(16)
 	return gormDB, err

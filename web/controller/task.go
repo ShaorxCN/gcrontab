@@ -42,11 +42,11 @@ func (s Task) CreateTask(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.ParamError, err.Error()))
 		return
 	}
-
 	tasks := []*task.Task{in}
 	taskService := ts.NewTaskService(utils.NewServiceContext(ctx), tasks)
 	err = taskService.CreateTask()
 
+	// 是否需要返回创建的实体 前端以此获取主键方便查询数据做展示
 	if err != nil {
 		if err == custom.ErrorRecordExist {
 			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.RecordExist, err.Error()))

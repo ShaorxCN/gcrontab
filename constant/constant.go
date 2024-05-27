@@ -33,11 +33,13 @@ const (
 	POSTJSON       = "JSON"
 	POSTFORM       = "FORM"
 
-	POSTBODY  = "BODY"
-	NOTIFYON  = "on"
-	NOTIFYOFF = "off"
-	STATUSON  = "on"
-	STATUSOFF = "off"
+	POSTBODY    = "BODY"
+	NOTIFYON    = "on"
+	NOTIFYOFF   = "off"
+	STATUSON    = "on"
+	STATUSONDB  = 1
+	STATUSOFF   = "off"
+	STATUSOFFDB = 0
 
 	// query
 
