@@ -21,7 +21,7 @@ const (
 type Task struct {
 	entity.BaseEntity
 	Name             string    `json:"name,omitempty" url:"name,omitempty"`
-	IntervalDuration int       `json:"intervalDuration,omitempty" url:"intervalDuration,omitempty"`
+	IntervalDuration int       `json:"intervalDuration,omitempty" url:"intervalDuration,omitempty"` // n个周期的n
 	UnitOfInterval   string    `json:"unitOfInterval,omitempty" url:"unitOfInterval,omitempty"`
 	Protocol         string    `json:"protocol,omitempty" url:"protocol,omitempty"`
 	Command          string    `json:"command,omitempty" url:"command,omitempty" `

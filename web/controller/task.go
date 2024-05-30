@@ -10,6 +10,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 )
 
@@ -75,7 +77,26 @@ func (s Task) DeleteTask(ctx *gin.Context) {
 
 // FindTaskByID 根据id 查找任务
 func (s Task) FindTaskByID(ctx *gin.Context) {
-	ctx.AbortWithStatusJSON(http.StatusOK, `{"name":"gkond"}`)
+	taskID, err := uuid.Parse(ctx.Param("taskID"))
+	if err != nil {
+		logrus.Errorf("parse uuid failed:%v", err)
+		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusBadRequest, custom.ParamErrorReturn("taskID").Error()))
+		return
+	}
+
+	taskService := ts.NewTaskService(utils.NewServiceContext(ctx), nil)
+	t, err := taskService.FindTaskByID(taskID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusNotFound, custom.ErrorRecordNotFound.Error()))
+		} else {
+			logrus.Errorf("find task failed:%v", err)
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorEntityLocked.Error()))
+		}
+		return
+	}
+
+	ctx.AbortWithStatusJSON(http.StatusOK, t)
 }
 
 func (s Task) FindTasks(ctx *gin.Context) {

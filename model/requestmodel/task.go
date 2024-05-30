@@ -21,7 +21,6 @@ type ModifyTask struct {
 	UpdateFlag       int8      `json:"-" url:"-"`
 	NextRuntime      string    `json:"nextRuntime,omitempty" url:"nextRuntime,omitempty"`
 	UpdateTimeUse    time.Time `json:"-" url:"-"`
-	CompanyCode      string    `json:"companyCode,omitempty" url:"companyCode,omitempty"`
 	Headers          string    `json:"headers,omitempty" url:"headers,omitempty"`
 	Sign             string    `json:"sign,omitempty" url:"-" `
 }

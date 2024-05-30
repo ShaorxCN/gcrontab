@@ -53,7 +53,6 @@ const (
 	SORTEDBY    = "sortedBy"
 	ORDER       = "order"
 	CREATERNAME = "createrName"
-	COMPANYCODE = "companyCode"
 	LOGTASKID   = "taskID"
 	TIMESTAMP   = "timeStamp"
 
@@ -71,7 +70,8 @@ const (
 	// DESC 倒序
 	DESC = "DESC"
 	// 逻辑删除
-	STATUSDEL = "del"
+	STATUSDEL   = "del"
+	STATUSDELDB = 2
 )
 
 var (

@@ -73,7 +73,7 @@ func GetNextTimeAfterNow(start time.Time, duration int, unit string) time.Time {
 		if unit == month {
 			if now.Year() == start.Year() {
 				factor = (int64(now.Month()) - int64(start.Month())) / int64(duration)
-			} else {
+			} else if now.Year() > start.Year() {
 				factor = int64(((now.Year()-start.Year())*12 + int((now.Month() - start.Month()))) / duration)
 			}
 

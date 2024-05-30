@@ -1,10 +1,12 @@
 package task
 
 import (
+	"gcrontab/constant"
 	"gcrontab/entity/task"
 	"gcrontab/model"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,4 +42,15 @@ func CreateTask(t *task.Task) error {
 		return err
 	}
 	return nil
+}
+
+func FindTaskByID(id uuid.UUID) (*task.Task, error) {
+	db := model.DB()
+	dbTask := &model.DBTask{}
+	err := db.Model(dbTask).Where("id = ? and status != ?", id, constant.STATUSDELDB).First(dbTask).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return task.FromDBTaskModel(dbTask)
 }

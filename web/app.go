@@ -36,9 +36,11 @@ func (g *GinConfig) Init() (err error) {
 	r.Use(
 		middleware.Logger(logger),
 		middleware.Recovery(logger),
+		middleware.QueryTrans(),
 	)
 
 	controller.AddTaskRouter(r)
+	controller.AddTaskLogRouter(r)
 
 	return r.Run(g.Host + ":" + g.Port)
 }

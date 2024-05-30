@@ -19,8 +19,7 @@ type Params struct {
 	SortedBy    string      `json:"sortedBy,omitempty"`
 	Order       string      `json:"order,omitempty"`
 	CreaterName string      `json:"createrName,omitempty"`
-	CompanyCode string      `json:"companyCode,omitempty"`
 	LogTaskID   string      `json:"taskID,omitempty"`
 	TimeStamp   int64       `json:"timeStamp,omitempty"`
-	TaskIDS     []uuid.UUID `json:"-"`
+	TaskIDS     []uuid.UUID `json:"taskIDs,omitempty"`
 }

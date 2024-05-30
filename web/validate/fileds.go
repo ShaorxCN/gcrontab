@@ -19,7 +19,6 @@ const (
 	param            = "param"
 	postType         = "postType"
 	remark           = "remark"
-	companyCode      = "companyCode"
 	taskCode         = "taskCode"
 	role             = "role"
 )

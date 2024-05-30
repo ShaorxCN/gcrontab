@@ -33,6 +33,9 @@ func dealNewTask(t *task.Task, operator, nickName string) {
 }
 
 func NewTaskService(ctx *utils.ServiceContext, tasks []*task.Task) *TaskService {
+	if tasks == nil {
+		return &TaskService{ctx, make([]*task.Task, 0, 10)}
+	}
 	return &TaskService{ctx, tasks}
 }
 
@@ -47,4 +50,8 @@ func (ts *TaskService) CreateTask() error {
 
 	rep.CreateTask(t)
 	return nil
+}
+
+func (ts *TaskService) FindTaskByID(id uuid.UUID) (*task.Task, error) {
+	return rep.FindTaskByID(id)
 }
