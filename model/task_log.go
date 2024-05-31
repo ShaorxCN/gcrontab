@@ -28,22 +28,3 @@ var taskLogTableName = new(DBTaskLog).TableName()
 func (DBTaskLog) TableName() string {
 	return "tbl_task_log"
 }
-
-// InsertTaskLog 保存日志
-func InsertTaskLog(tl *DBTaskLog) error {
-	return DB().Create(tl).Error
-}
-
-// UpdateTaskLog 更新日志
-func UpdateTaskLog(tl *DBTaskLog) error {
-	return DB().Save(tl).Error
-}
-
-// FindTaskLogByPK 根据主键查找log
-func FindTaskLogByPK(id uuid.UUID, timeStamp int64) (*DBTaskLog, error) {
-	tl := new(DBTaskLog)
-	tl.TimeStamp = timeStamp
-	tl.TaskID = id
-	err := DB().Model(tl).First(tl).Error
-	return tl, err
-}

@@ -2,7 +2,7 @@ package controller
 
 import (
 	"gcrontab/custom"
-	"gcrontab/model/requestmodel"
+	"gcrontab/rep/requestmodel"
 	"gcrontab/web/response"
 	"net/http"
 

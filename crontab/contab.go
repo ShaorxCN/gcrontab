@@ -8,7 +8,7 @@ import (
 	"gcrontab/email"
 	"gcrontab/entity/task"
 	tasklog "gcrontab/entity/task_log"
-	"gcrontab/model/requestmodel"
+	"gcrontab/rep/requestmodel"
 	taskRep "gcrontab/rep/task"
 	taskLogRep "gcrontab/rep/task_log"
 	"log"

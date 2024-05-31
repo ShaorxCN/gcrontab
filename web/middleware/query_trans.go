@@ -4,7 +4,7 @@ import (
 	"gcrontab/constant"
 	"gcrontab/custom"
 	"gcrontab/model"
-	"gcrontab/model/requestmodel"
+	"gcrontab/rep/requestmodel"
 	"gcrontab/utils"
 	"gcrontab/web/response"
 	"net/http"

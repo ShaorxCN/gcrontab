@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"gcrontab/constant"
-	"gcrontab/model/requestmodel"
+	"gcrontab/rep/requestmodel"
 	"time"
 
 	"github.com/google/uuid"
