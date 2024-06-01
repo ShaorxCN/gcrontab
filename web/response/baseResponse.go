@@ -1,5 +1,9 @@
 package response
 
+import (
+	tasklog "gcrontab/entity/task_log"
+)
+
 // BaseResponse web 基础应答
 type BaseResponse struct {
 	Code    string `json:"code"`
@@ -56,4 +60,11 @@ func NewAPISuccessResponse() *APIResponse {
 		Code: "000",
 		Msg:  "success",
 	}
+}
+
+// FindTaskLogsResponse log 返回结构
+type FindTaskLogsResponse struct {
+	*BaseResponse
+	Count    int64              `json:"count"`
+	TaskLogs []*tasklog.TaskLog `json:"taskLogs"`
 }

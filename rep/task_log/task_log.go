@@ -10,24 +10,37 @@ import (
 	"gcrontab/rep/requestmodel"
 
 	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 )
 
-func SaveTaskLog(tl *tle.TaskLog) error {
-	dbtl, err := tl.ToDBTaskLogModel()
-	if err != nil {
-		return err
-	}
-
-	return model.DB().Create(dbtl).Error
+type TaskLogRep struct {
+	db *gorm.DB
 }
 
-func UpdateTaskLog(tl *tle.TaskLog) error {
+func NewTaskLogRep(db *gorm.DB) *TaskLogRep {
+	if db == nil {
+		db = model.DB()
+	}
+
+	return &TaskLogRep{db}
+}
+
+func (r *TaskLogRep) SaveTaskLog(tl *tle.TaskLog) error {
 	dbtl, err := tl.ToDBTaskLogModel()
 	if err != nil {
 		return err
 	}
 
-	return model.DB().Save(dbtl).Error
+	return r.db.Create(dbtl).Error
+}
+
+func (r *TaskLogRep) UpdateTaskLog(tl *tle.TaskLog) error {
+	dbtl, err := tl.ToDBTaskLogModel()
+	if err != nil {
+		return err
+	}
+
+	return r.db.Save(dbtl).Error
 }
 
 func ModifyTaskTimeByID(id uuid.UUID, param *requestmodel.ModifyTask) error {
@@ -36,11 +49,11 @@ func ModifyTaskTimeByID(id uuid.UUID, param *requestmodel.ModifyTask) error {
 }
 
 // FindTaskLogByPK 根据主键查找log
-func FindTaskLogByPK(id uuid.UUID, timeStamp int64) (*tasklog.TaskLog, error) {
+func (r *TaskLogRep) FindTaskLogByPK(id uuid.UUID, timeStamp int64) (*tasklog.TaskLog, error) {
 	tl := new(model.DBTaskLog)
 	tl.TimeStamp = timeStamp
 	tl.TaskID = id
-	err := model.DB().Model(tl).First(tl).Error
+	err := r.db.Model(tl).First(tl).Error
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +96,11 @@ func buildQuery4Log(p *requestmodel.Params) (string, []interface{}) {
 }
 
 // FindTaskLogByID 根据任务id返回日志
-func FindTaskLogByID(p *requestmodel.Params) ([]*tasklog.TaskLog, int64, error) {
+func (r *TaskLogRep) FindTaskLogByID(p *requestmodel.Params) ([]*tasklog.TaskLog, int64, error) {
 	limit := p.PageSize
 	offset := (p.Page - 1) * p.PageSize
 
-	db := model.DB().Model(new(model.DBTaskLog))
+	db := r.db.Model(new(model.DBTaskLog))
 
 	if p.SortedBy != "" {
 		if p.Order == constant.ASC || p.Order == constant.DESC {

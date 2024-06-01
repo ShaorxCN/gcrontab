@@ -10,10 +10,12 @@ import (
 	"gcrontab/utils"
 
 	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 )
 
 type TaskService struct {
 	ctx   *utils.ServiceContext
+	db    *gorm.DB
 	tasks []*task.Task
 }
 
@@ -32,11 +34,14 @@ func dealNewTask(t *task.Task, operator, nickName string) {
 	}
 }
 
-func NewTaskService(ctx *utils.ServiceContext, tasks []*task.Task) *TaskService {
-	if tasks == nil {
-		return &TaskService{ctx, make([]*task.Task, 0, 10)}
+func NewTaskService(ctx *utils.ServiceContext, db *gorm.DB, tasks []*task.Task) *TaskService {
+	if db == nil {
+		db = model.DB()
 	}
-	return &TaskService{ctx, tasks}
+	if tasks == nil {
+		return &TaskService{ctx, db, make([]*task.Task, 0, 10)}
+	}
+	return &TaskService{ctx, db, tasks}
 }
 
 func (ts *TaskService) CreateTask() error {
@@ -47,11 +52,12 @@ func (ts *TaskService) CreateTask() error {
 	t := ts.tasks[0]
 
 	dealNewTask(t, ts.ctx.Operator, ts.ctx.OperatorName)
-
-	rep.CreateTask(t)
+	taskRep := rep.NewTaskRep(ts.db.New())
+	taskRep.CreateTask(t)
 	return nil
 }
 
 func (ts *TaskService) FindTaskByID(id uuid.UUID) (*task.Task, error) {
-	return rep.FindTaskByID(id)
+	taskRep := rep.NewTaskRep(ts.db.New())
+	return taskRep.FindTaskByID(id)
 }

@@ -7,11 +7,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 )
 
+type TaskRep struct {
+	db *gorm.DB
+}
+
+func NewTaskRep(db *gorm.DB) *TaskRep {
+	if db == nil {
+		db = model.DB()
+	}
+
+	return &TaskRep{db}
+}
+
 // FindActiveTasks 查找待运行的任务
-func FindActiveTasks(now time.Time) ([]*task.Task, error) {
+func (r *TaskRep) FindActiveTasks(now time.Time) ([]*task.Task, error) {
 	mts, err := model.FindActiveTasks(now)
 	if err != nil {
 		return nil, err
@@ -30,13 +43,13 @@ func FindActiveTasks(now time.Time) ([]*task.Task, error) {
 	return ts, nil
 }
 
-func CreateTask(t *task.Task) error {
+func (r *TaskRep) CreateTask(t *task.Task) error {
 	m, err := t.ToDBTaskModel()
 	if err != nil {
 		return err
 	}
 
-	db := model.DB()
+	db := r.db
 	if err := db.Create(m).Error; err != nil {
 		logrus.Errorf("save task[%s] to db Failed:%v", m.Name, err)
 		return err
@@ -44,8 +57,8 @@ func CreateTask(t *task.Task) error {
 	return nil
 }
 
-func FindTaskByID(id uuid.UUID) (*task.Task, error) {
-	db := model.DB()
+func (r *TaskRep) FindTaskByID(id uuid.UUID) (*task.Task, error) {
+	db := r.db
 	dbTask := &model.DBTask{}
 	err := db.Model(dbTask).Where("id = ? and status != ?", id, constant.STATUSDELDB).First(dbTask).Error
 	if err != nil {

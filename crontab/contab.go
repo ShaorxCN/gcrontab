@@ -130,7 +130,8 @@ func (ts *taskScheduler) schedulerStart() {
 		}
 		now := utils.Now()
 		deadline = utils.Now().Add(time.Duration(ts.DBScanInterval) * time.Millisecond)
-		todo, err = taskRep.FindActiveTasks(deadline)
+		taskrep := taskRep.NewTaskRep(model.DB())
+		todo, err = taskrep.FindActiveTasks(deadline)
 		if err != nil {
 			// TODO:是否需要通知
 			logger.WithTime(utils.Now()).Errorf("find active tasks failed:%v", err)
@@ -276,7 +277,8 @@ func saveTaskLog(t *task.Task, tm time.Time) (tl *tasklog.TaskLog, err error) {
 	tl.StartTimeT = tm
 	hostName, _ := os.Hostname()
 	tl.Host = hostName
-	err = taskLogRep.SaveTaskLog(tl)
+	logRep := taskLogRep.NewTaskLogRep(model.DB())
+	err = logRep.SaveTaskLog(tl)
 	if err != nil {
 		logger.WithTime(utils.Now()).Errorf("save task_log failed:%v", err)
 	}
@@ -388,8 +390,8 @@ func updateTaskLog(res *ResponseWrapper, tl *tasklog.TaskLog) {
 	tl.Result = res.Body
 	tl.TotalTime = res.End.Sub(tl.StartTimeT).Nanoseconds() / 1e6
 	tl.EndTime = res.End.String()
-
-	err := taskLogRep.UpdateTaskLog(tl)
+	logrep := taskLogRep.NewTaskLogRep(model.DB())
+	err := logrep.UpdateTaskLog(tl)
 	if err != nil {
 		logger.WithTime(utils.Now()).Errorf("update task_log failed:%v", err)
 	}

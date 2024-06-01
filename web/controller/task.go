@@ -45,7 +45,7 @@ func (s Task) CreateTask(ctx *gin.Context) {
 		return
 	}
 	tasks := []*task.Task{in}
-	taskService := service.NewTaskService(utils.NewServiceContext(ctx, nil), tasks)
+	taskService := service.NewTaskService(utils.NewServiceContext(ctx, nil), nil, tasks)
 	err = taskService.CreateTask()
 
 	// 是否需要返回创建的实体 前端以此获取主键方便查询数据做展示
@@ -84,7 +84,7 @@ func (s Task) FindTaskByID(ctx *gin.Context) {
 		return
 	}
 
-	taskService := service.NewTaskService(utils.NewServiceContext(ctx, nil), nil)
+	taskService := service.NewTaskService(utils.NewServiceContext(ctx, nil), nil, nil)
 	t, err := taskService.FindTaskByID(taskID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
