@@ -35,6 +35,7 @@ var (
 	ErrorUnSupportTaskProtocol = errors.New("不支持的任务类型")
 	ErrorForbidden             = errors.New("权限不足")
 	ErrorSignError             = errors.New("签名错误")
+	ErrorRunTaskError          = errors.New("执行任务失败")
 )
 
 // ParamErrorReturn 字段校验错误

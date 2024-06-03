@@ -19,9 +19,8 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(ctx *gin.Context, query *requestmodel.Params) *ServiceContext {
-	operator := ctx.GetHeader(constant.HEADEROPERATOR)
+	operator := ctx.GetHeader(constant.HEADEROPERATACCT)
 	nickName := ctx.GetHeader(constant.HEADEROPERATORNAME)
-
 	sctx := &ServiceContext{
 		Operator:     operator,
 		OperatorName: nickName,

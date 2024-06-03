@@ -62,8 +62,29 @@ func (s Task) CreateTask(ctx *gin.Context) {
 
 }
 
-// RunTask 立即执行一条任务。 只更新日志
+// RunTask 立即执行一条任务(补偿用)。 只更新日志 不会修改下次执行时间 不会扰乱原来的周期规律。本身dbscan周期会找到落后的任务
+// 并且按照周期规律更新下次执行时间为当前时间后最接近的正常周期时间
 func (s Task) RunTask(ctx *gin.Context) {
+	taskID, err := uuid.Parse(ctx.Param("taskID"))
+	if err != nil {
+		logrus.Errorf("parse uuid failed:%v", err)
+		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusBadRequest, custom.ParamErrorReturn("taskID").Error()))
+		return
+	}
+
+	taskService := service.NewTaskService(utils.NewServiceContext(ctx, nil), nil, nil)
+	err = taskService.RunTask(taskID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusNotFound, custom.ErrorRecordNotFound.Error()))
+		} else {
+			logrus.Errorf("run task failed:%v", err)
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.InternalServerError, custom.ErrorRunTaskError.Error()))
+		}
+		return
+	}
+
+	ctx.AbortWithStatusJSON(http.StatusOK, response.NewSuccessBaseResponse)
 
 }
 

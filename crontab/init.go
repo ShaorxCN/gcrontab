@@ -64,7 +64,6 @@ func (c *CrontabConfig) Init() error {
 	ts.updateTaskChan = make(chan *task.Task, 30)
 	ts.updateExecTask = make([]*task.Task, 0, 100)
 	ts.taskUUIDMap = make(map[string]int)
-	imme_tasks = make(chan *task.Task, c.RunSize)
 	ts.exit = make(chan struct{})
 	ts.ctx, ts.cancel = context.WithCancel(context.Background())
 

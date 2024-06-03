@@ -28,10 +28,8 @@ import (
 )
 
 var (
-	ts *taskScheduler
-	// imme_tasks 立即运行的channel  会更新下次执行时间并且记录user host等信息。
-	imme_tasks chan *task.Task
-	todo       []*task.Task
+	ts   *taskScheduler
+	todo []*task.Task
 )
 
 type taskScheduler struct {
@@ -48,6 +46,7 @@ type taskScheduler struct {
 	updateTaskChan chan *task.Task
 	// 更新继续执行的任务数组
 	updateExecTask []*task.Task
+	lock           sync.Mutex
 	// 记录todo中任务uuid和index的映射
 	taskUUIDMap map[string]int
 }
@@ -76,8 +75,27 @@ func unLockInMap(t *task.Task) error {
 }
 
 // ExecImmediately 立即执行
-func ExecImmediately(t *task.Task, tl *tasklog.TaskLog) {
+func ExecImmediately(t *task.Task, operator string) error {
+	hostName, err := os.Hostname()
+	if err != nil {
+		logrus.Errorf("get hostname failed:%v", err)
+		return err
+	}
+	// 先创建日志记录
+	now := utils.Now()
+	tl := &tasklog.TaskLog{
+		TimeStamp: now.UnixNano(),
+		Status:    constant.STATUSPROCE,
+		TaskName:  t.Name,
+		TaskID:    t.ID.GetIDValue(),
+		Command:   t.Command,
+		StartTime: now.String(),
+		User:      operator,
+		Host:      hostName,
+	}
+
 	ts.handler(t, tl)
+	return nil
 }
 
 func (ts *taskScheduler) dealUpdateTask() {
@@ -93,11 +111,17 @@ func (ts *taskScheduler) dealUpdateTask() {
 	var t *task.Task
 	for {
 		if t, ok = <-ts.updateTaskChan; ok {
-			ts.updateExecTask = append(ts.updateExecTask, t)
+			ts.appendupdateExecTask(t)
 		} else {
 			return
 		}
 	}
+}
+
+func (ts *taskScheduler) appendupdateExecTask(t *task.Task) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+	ts.updateExecTask = append(ts.updateExecTask, t)
 }
 
 func (ts *taskScheduler) schedulerStart() {
@@ -181,6 +205,9 @@ func (ts *taskScheduler) schedulerStart() {
 							todo[index] = nil
 						}
 						return
+					} else {
+						// 选择使用最新查询到的或者还是使用第一次查询到的
+						t = nt
 					}
 
 					defer func() {
@@ -197,41 +224,51 @@ func (ts *taskScheduler) schedulerStart() {
 						return
 					}
 					logger.WithTime(utils.Now()).Infof("[%s]exec...", t.ID)
-					ts.handler(t, tl)
+					remove := ts.handler(t, tl)
 
-					nextTime, err := updateTask4Next(te, execTime)
-					if err != nil {
-						logger.WithTime(utils.Now()).Errorf("update task[%s] to next failed :%v", t.ID, err)
-						return
-					}
-
-					if utils.IsBeforeOrEq(nextTime, deadline) {
-						ts.updateTaskChan <- t
-					} else {
+					if remove {
 						todo[index] = nil
-					}
-					logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
+					} else {
+						nextTime, err := updateTask4Next(t, execTime)
+						if err != nil {
+							logger.WithTime(utils.Now()).Errorf("update task[%s] to next failed :%v", t.ID, err)
+							return
+						}
 
+						// 这里可以直接修改 不用过channel
+						if utils.IsBeforeOrEq(nextTime, deadline) {
+							ts.updateTaskChan <- t
+						} else {
+							todo[index] = nil
+						}
+						logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
+					}
 				}(index, te)
 			}
 
 			<-tickerInMem.C
-			for _, v := range ts.updateExecTask {
-				if v != nil {
-					if index, ok := ts.taskUUIDMap[v.ID.GetIDValue()]; ok {
-						todo[index] = v
-					} else {
-						todo = append(todo, v)
-						ts.taskUUIDMap[v.ID.GetIDValue()] = len(todo) - 1
-					}
-				}
-			}
+			ts.dealUpdateTaskSlice()
 		}
 
 		select {
 		case <-tickerInDB.C:
 		case <-ts.ctx.Done():
 			logrus.Infoln("cancel crontab.....")
+		}
+	}
+}
+
+func (ts *taskScheduler) dealUpdateTaskSlice() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+	for _, v := range ts.updateExecTask {
+		if v != nil {
+			if index, ok := ts.taskUUIDMap[v.ID.GetIDValue()]; ok {
+				todo[index] = v
+			} else {
+				todo = append(todo, v)
+				ts.taskUUIDMap[v.ID.GetIDValue()] = len(todo) - 1
+			}
 		}
 	}
 }
@@ -247,7 +284,7 @@ func doubleCheck(now time.Time, id string) (*task.Task, bool) {
 	return tnew, utils.IsBeforeOrEq(tnew.NextRuntimeUse, now)
 }
 
-func (ts *taskScheduler) handler(t *task.Task, tl *tasklog.TaskLog) {
+func (ts *taskScheduler) handler(t *task.Task, tl *tasklog.TaskLog) bool {
 	defer func() {
 		if err := recover(); err != nil {
 			buf := make([]byte, 2048)
@@ -261,9 +298,11 @@ func (ts *taskScheduler) handler(t *task.Task, tl *tasklog.TaskLog) {
 	default:
 		logger.WithTime(utils.Now()).Errorf("not support this type of job[%s]", t.Command)
 		protocolFailHandler(t, tl)
+		return true
 
 	}
 
+	return false
 }
 
 func saveTaskLog(t *task.Task, tm time.Time) (tl *tasklog.TaskLog, err error) {
@@ -295,11 +334,8 @@ func saveTaskLog(t *task.Task, tm time.Time) (tl *tasklog.TaskLog, err error) {
 	return
 }
 
-// TODO:协议不支持的不计日志不落库 只发邮件 ?是否需要重复记录不支持的任务类型
+// TODO:协议不支持的不落库 只发邮件以及记录日志 ?是否需要重复记录不支持的任务类型
 func protocolFailHandler(t *task.Task, tl *tasklog.TaskLog) {
-	tl.ResultCode = -1
-	tl.Result = custom.ErrorUnSupportTaskProtocol.Error()
-
 	copy := *t
 
 	go func(t *task.Task) {
@@ -324,8 +360,9 @@ func protocolFailHandler(t *task.Task, tl *tasklog.TaskLog) {
 
 	}(&copy)
 
-	t = nil
-
+	res := &ResponseWrapper{StatusCode: -1, Body: custom.ErrorUnSupportTaskProtocol.Error(), Header: make(http.Header)}
+	res.End = utils.Now()
+	updateTaskLog(res, tl)
 }
 
 func httpHandler(t *task.Task, tl *tasklog.TaskLog) {
@@ -426,7 +463,8 @@ func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
 	if err != nil {
 		return param.NextRuntimeUse, err
 	}
-
+	t.LastRuntimeUse = exec
+	t.NextRuntimeUse = param.NextRuntimeUse
 	taskRep := taskRep.NewTaskRep(nil)
 
 	return param.NextRuntimeUse, taskRep.ModifyTaskTimeByID(taskID, param)

@@ -62,7 +62,7 @@ func GetNextTime(start time.Time, duration int, unit string) time.Time {
 	return start
 }
 
-// GetNextTimeAfterNow 获取当前时间之后的执行时间
+// GetNextTimeAfterNow 获取当前时间之后的执行时间（基于记录中上次执行的时间 然后计算n个周期直到after now）
 func GetNextTimeAfterNow(start time.Time, duration int, unit string) time.Time {
 	now := Now()
 

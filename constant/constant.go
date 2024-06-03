@@ -9,9 +9,7 @@ import (
 const (
 
 	// header
-
 	HEADEROPERATORNAME = "Operator-Name"
-	HEADEROPERATOR     = "Operator"
 	HEADEROPERATACCT   = "Operator-UserName"
 	HEADEROPERATORROLE = "Operator-Role"
 	HEADERTOKEN        = "Access-Token"

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"gcrontab/constant"
+	"gcrontab/crontab"
 	"gcrontab/entity/task"
 	"gcrontab/interface/entity"
 	"gcrontab/model"
@@ -60,4 +61,15 @@ func (ts *TaskService) CreateTask() error {
 func (ts *TaskService) FindTaskByID(id uuid.UUID) (*task.Task, error) {
 	taskRep := rep.NewTaskRep(ts.db.New())
 	return taskRep.FindTaskByID(id)
+}
+
+func (ts *TaskService) RunTask(id uuid.UUID) error {
+	taskRep := rep.NewTaskRep(ts.db.New())
+	task, err := taskRep.FindTaskByID(id)
+	if err != nil {
+		return err
+	}
+
+	return crontab.ExecImmediately(task, ts.ctx.Operator)
+
 }
