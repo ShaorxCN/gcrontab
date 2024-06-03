@@ -149,13 +149,13 @@ func (ts *taskScheduler) schedulerStart() {
 			default:
 			}
 			// 1.22 新的loopvar 每次都会重新声明定义te 不需要重新传
-			for _, te := range todo {
+			for index, te := range todo {
 				if te == nil {
 					continue
 				}
 
 				ts.MaxGoroutine <- 1
-				go func(t *task.Task) {
+				go func(index int, t *task.Task) {
 					defer func() {
 						<-ts.MaxGoroutine
 						if err := recover(); err != nil {
@@ -169,11 +169,16 @@ func (ts *taskScheduler) schedulerStart() {
 						return
 					}
 
-					if !doubleCheck(now, t.ID.GetIDValue()) {
+					if nt, needRun := doubleCheck(now, t.ID.GetIDValue()); !needRun {
 						logger.WithTime(utils.Now()).Warnf("[%s]TaskName[%s] double check failed", t.ID.GetIDValue(), t.Name)
 						err := unLockInMap(t)
 						if err != nil {
 							logger.WithTime(utils.Now()).Errorf("unlock entity failed:%v entity:%v", err, t.ID)
+						}
+						if utils.IsBeforeOrEq(nt.NextRuntimeUse, deadline) {
+							ts.updateTaskChan <- t
+						} else {
+							todo[index] = nil
 						}
 						return
 					}
@@ -202,10 +207,12 @@ func (ts *taskScheduler) schedulerStart() {
 
 					if utils.IsBeforeOrEq(nextTime, deadline) {
 						ts.updateTaskChan <- t
+					} else {
+						todo[index] = nil
 					}
 					logger.WithTime(utils.Now()).Infof("[%s]exec end...", t.ID)
 
-				}(te)
+				}(index, te)
 			}
 
 			<-tickerInMem.C
@@ -229,13 +236,15 @@ func (ts *taskScheduler) schedulerStart() {
 	}
 }
 
-func doubleCheck(now time.Time, id string) bool {
-	tnew, err := model.FindTaskByID(uuid.MustParse(id))
+func doubleCheck(now time.Time, id string) (*task.Task, bool) {
+	taskRep := taskRep.NewTaskRep(nil)
+	tnew, err := taskRep.FindTaskByID(uuid.MustParse(id))
 	if err != nil {
 		logger.WithTime(utils.Now()).Errorf("find task by id[%s] failed:%v", id, err)
-		return false
+		return tnew, false
 	}
-	return utils.IsBeforeOrEq(*tnew.NextRuntime, now)
+
+	return tnew, utils.IsBeforeOrEq(tnew.NextRuntimeUse, now)
 }
 
 func (ts *taskScheduler) handler(t *task.Task, tl *tasklog.TaskLog) {
@@ -417,5 +426,8 @@ func updateTask4Next(t *task.Task, exec time.Time) (time.Time, error) {
 	if err != nil {
 		return param.NextRuntimeUse, err
 	}
-	return param.NextRuntimeUse, taskLogRep.ModifyTaskTimeByID(taskID, param)
+
+	taskRep := taskRep.NewTaskRep(nil)
+
+	return param.NextRuntimeUse, taskRep.ModifyTaskTimeByID(taskID, param)
 }

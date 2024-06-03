@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"gcrontab/constant"
-	"gcrontab/rep/requestmodel"
 	"time"
 
 	"github.com/google/uuid"
@@ -108,6 +107,10 @@ type DBTask struct {
 
 var taskTableName = new(DBTask).TableName()
 
+func GetTaskTableName() string {
+	return taskTableName
+}
+
 // TableName 返回批次数据表名
 func (DBTask) TableName() string {
 	return "tbl_task"
@@ -180,25 +183,4 @@ func FindActiveTasks(now time.Time) ([]*DBTask, error) {
 	var res []*DBTask
 	err := db.Table(taskTableName).Where("next_runtime <= ? and Status = ?", now, constant.STATUSONDB).Find(&res).Error
 	return res, err
-}
-
-// ModifyTaskTimeByID 根据ID 修改任务时间
-func ModifyTaskTimeByID(id uuid.UUID, param *requestmodel.ModifyTask) error {
-	db := DB()
-	m := make(map[string]interface{})
-
-	if !param.NextRuntimeUse.IsZero() {
-		m["next_runtime"] = param.NextRuntimeUse
-	}
-
-	if !param.LastRuntimeUse.IsZero() {
-		m["last_runtime"] = param.LastRuntimeUse
-	}
-
-	if !param.UpdateTimeUse.IsZero() {
-		m["update_at"] = param.UpdateTimeUse
-	}
-
-	return db.Table(taskTableName).Where("id = ?", id).Updates(m).Error
-
 }

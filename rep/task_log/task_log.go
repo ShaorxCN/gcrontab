@@ -43,11 +43,6 @@ func (r *TaskLogRep) UpdateTaskLog(tl *tle.TaskLog) error {
 	return r.db.Save(dbtl).Error
 }
 
-func ModifyTaskTimeByID(id uuid.UUID, param *requestmodel.ModifyTask) error {
-
-	return model.ModifyTaskTimeByID(id, param)
-}
-
 // FindTaskLogByPK 根据主键查找log
 func (r *TaskLogRep) FindTaskLogByPK(id uuid.UUID, timeStamp int64) (*tasklog.TaskLog, error) {
 	tl := new(model.DBTaskLog)

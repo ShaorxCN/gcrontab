@@ -4,6 +4,7 @@ import (
 	"gcrontab/constant"
 	"gcrontab/entity/task"
 	"gcrontab/model"
+	"gcrontab/rep/requestmodel"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,4 +67,23 @@ func (r *TaskRep) FindTaskByID(id uuid.UUID) (*task.Task, error) {
 	}
 
 	return task.FromDBTaskModel(dbTask)
+}
+
+func (r *TaskRep) ModifyTaskTimeByID(id uuid.UUID, param *requestmodel.ModifyTask) error {
+	db := r.db
+	m := make(map[string]interface{})
+
+	if !param.NextRuntimeUse.IsZero() {
+		m["next_runtime"] = param.NextRuntimeUse
+	}
+
+	if !param.LastRuntimeUse.IsZero() {
+		m["last_runtime"] = param.LastRuntimeUse
+	}
+
+	if !param.UpdateTimeUse.IsZero() {
+		m["update_at"] = param.UpdateTimeUse
+	}
+
+	return db.Table(model.GetTaskTableName()).Where("id = ?", id).Updates(m).Error
 }

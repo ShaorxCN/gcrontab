@@ -28,3 +28,7 @@ var taskLogTableName = new(DBTaskLog).TableName()
 func (DBTaskLog) TableName() string {
 	return "tbl_task_log"
 }
+
+func GetTaskLogTableName() string {
+	return taskLogTableName
+}
