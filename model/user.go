@@ -1,13 +1,10 @@
 package model
 
 import (
+	"gcrontab/constant"
 	"time"
 
 	"github.com/google/uuid"
-)
-
-const (
-	StatusNormal = "normal"
 )
 
 var userTableName = new(DBUser).TableName()
@@ -18,7 +15,7 @@ type DBUser struct {
 	NickName   string     `gorm:"type:varchar(255)"`
 	PassWord   string     `gorm:"type:varchar(64)"`
 	Salt       string     `gorm:"type:varchar(32)"`
-	Status     string     `gorm:"type:varchar(32)"`
+	Status     int        `gorm:"type:smallint"`
 	Email      string     `gorm:"type:varchar(255)"`
 	FailNotify string     `gorm:"index;type:varchar(8)"` // 任务失败是否通知
 	CreateAt   *time.Time `gorm:"index;default:now()"`
@@ -34,4 +31,12 @@ func (DBUser) TableName() string {
 
 func GetUserTableName() string {
 	return userTableName
+}
+
+// FindEmails 寻找待发送的邮箱
+func FindEmails() ([]string, error) {
+	db := DB()
+	var emails []string
+	err := db.Table(userTableName).Where("fail_notify = ? and status = ?", constant.NOTIFYON, constant.STATUSNORMALDB).Pluck("email", &emails).Error
+	return emails, err
 }

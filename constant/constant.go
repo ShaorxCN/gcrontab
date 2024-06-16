@@ -7,6 +7,13 @@ import (
 )
 
 const (
+	TaskStatus = iota
+	UserStatus
+	DB2Enity
+	Entity2DB
+)
+
+const (
 
 	// header
 	HEADEROPERATORID   = "OperatorID"
@@ -32,15 +39,13 @@ const (
 	POSTJSON       = "JSON"
 	POSTFORM       = "FORM"
 
-	POSTBODY       = "BODY"
-	NOTIFYON       = "on"
-	NOTIFYOFF      = "off"
-	STATUSON       = "on"
-	STATUSONDB     = 1
-	STATUSOFF      = "off"
-	STATUSOFFDB    = 0
-	STATUSNORMAL   = "normal"
-	STATUSNORMALDB = "0"
+	POSTBODY    = "BODY"
+	NOTIFYON    = "on"
+	NOTIFYOFF   = "off"
+	STATUSON    = "on"
+	STATUSONDB  = 1
+	STATUSOFF   = "off"
+	STATUSOFFDB = 0
 
 	// query
 
@@ -71,8 +76,10 @@ const (
 	// DESC 倒序
 	DESC = "DESC"
 	// 逻辑删除
-	STATUSDEL   = "del"
-	STATUSDELDB = 2
+	STATUSDEL      = "del"
+	STATUSDELDB    = 2
+	STATUSNORMAL   = "normal"
+	STATUSNORMALDB = 0
 )
 
 var (

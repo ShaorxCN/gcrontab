@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"gcrontab/constant"
 	"gcrontab/entity"
 	entitier "gcrontab/interface/entity"
@@ -59,7 +60,15 @@ func (u *User) ToDBUserModel() (*model.DBUser, error) {
 	user.NickName = u.NickName
 	user.PassWord = u.PassWord
 	user.Salt = u.Salt
-	user.Status = u.Status
+	switch u.Status {
+	case constant.STATUSNORMAL:
+		user.Status = constant.STATUSNORMALDB
+	case constant.STATUSDEL:
+		user.Status = constant.STATUSDELDB
+	default:
+		return nil, errors.New("status error")
+	}
+
 	user.Email = u.Email
 	user.FailNotify = u.FailNotify
 	user.Creater = u.Creater
@@ -69,7 +78,7 @@ func (u *User) ToDBUserModel() (*model.DBUser, error) {
 }
 
 // FromDBUserModel model-entity
-func FromDBUserModel(u *model.DBUser) *User {
+func FromDBUserModel(u *model.DBUser) (*User, error) {
 	e := new(User)
 
 	e.ID = entitier.NewEntityKey(u.ID.String(), UserEntityType)
@@ -81,10 +90,17 @@ func FromDBUserModel(u *model.DBUser) *User {
 	e.NickName = u.NickName
 	e.PassWord = u.PassWord
 	e.Salt = u.Salt
-	e.Status = u.Status
+	switch u.Status {
+	case constant.STATUSNORMALDB:
+		e.Status = constant.STATUSNORMAL
+	case constant.STATUSDELDB:
+		e.Status = constant.STATUSDEL
+	default:
+		return nil, errors.New("status error")
+	}
 	e.Email = u.Email
 	e.FailNotify = u.FailNotify
 	e.Creater = u.Creater
 	e.Role = u.Role
-	return e
+	return e, nil
 }

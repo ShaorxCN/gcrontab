@@ -28,5 +28,5 @@ func (r *UserRep) FindUserByUserName(userName string) (*user.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return user.FromDBUserModel(u), nil
+	return user.FromDBUserModel(u)
 }
