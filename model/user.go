@@ -1,7 +1,6 @@
 package model
 
 import (
-	"gcrontab/constant"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,42 +32,6 @@ func (DBUser) TableName() string {
 	return "tbl_user"
 }
 
-// FindUserByUserName 根据用户名查询用户
-func FindUserByUserName(userName string) (*DBUser, error) {
-	db := DB()
-	dbUser := &DBUser{}
-	err := db.Model(dbUser).Where("user_name = ? and status = ?", userName, StatusNormal).First(dbUser).Error
-	return dbUser, err
-}
-
-// FindUserByID 根据id 查询用户
-func FindUserByID(id uuid.UUID) (*DBUser, error) {
-	db := DB()
-	dbUser := &DBUser{}
-	err := db.Model(dbUser).Where("id = ? and status = ?", id, StatusNormal).First(dbUser).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return dbUser, nil
-}
-
-func InsertUser(u *DBUser) error {
-	db := DB()
-	return db.Create(u).Error
-}
-
-// DeleteUserByID 逻辑删除用户
-func DeleteUserByID(id uuid.UUID, newUserName string) error {
-	db := DB()
-	m := map[string]string{"status": constant.STATUSON, "user_name": newUserName}
-	return db.Table(userTableName).Where("id = ?", id).Update(m).Error
-}
-
-// FindEmails 寻找待发送的邮箱
-func FindEmails() ([]string, error) {
-	db := DB()
-	var emails []string
-	err := db.Table(userTableName).Where("fail_notify = ? and status = ?", constant.NOTIFYON, StatusNormal).Pluck("email", &emails).Error
-	return emails, err
+func GetUserTableName() string {
+	return userTableName
 }

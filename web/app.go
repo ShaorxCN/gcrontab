@@ -36,6 +36,8 @@ func (g *GinConfig) Init() (err error) {
 	r.Use(
 		middleware.Logger(logger),
 		middleware.Recovery(logger),
+		middleware.Cors(),
+		middleware.CheckPermission(logger),
 		middleware.QueryTrans(),
 	)
 

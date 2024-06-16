@@ -9,6 +9,7 @@ import (
 const (
 
 	// header
+	HEADEROPERATORID   = "OperatorID"
 	HEADEROPERATORNAME = "Operator-Name"
 	HEADEROPERATACCT   = "Operator-UserName"
 	HEADEROPERATORROLE = "Operator-Role"
@@ -31,13 +32,15 @@ const (
 	POSTJSON       = "JSON"
 	POSTFORM       = "FORM"
 
-	POSTBODY    = "BODY"
-	NOTIFYON    = "on"
-	NOTIFYOFF   = "off"
-	STATUSON    = "on"
-	STATUSONDB  = 1
-	STATUSOFF   = "off"
-	STATUSOFFDB = 0
+	POSTBODY       = "BODY"
+	NOTIFYON       = "on"
+	NOTIFYOFF      = "off"
+	STATUSON       = "on"
+	STATUSONDB     = 1
+	STATUSOFF      = "off"
+	STATUSOFFDB    = 0
+	STATUSNORMAL   = "normal"
+	STATUSNORMALDB = "0"
 
 	// query
 
