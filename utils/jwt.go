@@ -13,8 +13,8 @@ type Claims struct {
 	NickName string //  昵称
 	DeadLine string //  最后可以refresh token 时间  double exp
 	Secret   string //  salt
-	UserName string
-	Role     string
+	// UserName string
+	Role string
 }
 
 // GenToken 生成token
@@ -25,7 +25,6 @@ func GenToken(c *Claims) (string, error) {
 	claims["exp"] = c.Exp
 	claims["nickName"] = c.NickName
 	claims["deadLine"] = c.DeadLine
-	claims["userName"] = c.UserName
 	claims["role"] = c.Role
 
 	token.Claims = claims
@@ -57,7 +56,6 @@ func ValideToken(tokenStr, secret string) (*Claims, error) {
 			Exp:      claims["exp"].(string),
 			NickName: claims["nickName"].(string),
 			DeadLine: claims["deadLine"].(string),
-			UserName: claims["userName"].(string),
 			Role:     claims["role"].(string),
 		}, nil
 	}

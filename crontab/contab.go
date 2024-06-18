@@ -348,7 +348,7 @@ func protocolFailHandler(t *task.Task, tl *tasklog.TaskLog) {
 		}()
 
 		// 统一设置的通知email
-		emails, err := model.FindEmails()
+		emails, err := model.FindEmails(t.Creater)
 		if err != nil {
 			logrus.Errorf("taskID[%s] find  email addresses failed:%v", t.ID, err)
 			return
@@ -396,7 +396,7 @@ func httpHandler(t *task.Task, tl *tasklog.TaskLog) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		emails, err := model.FindEmails()
+		emails, err := model.FindEmails(t.Creater)
 		if err != nil {
 			logger.WithTime(utils.Now()).Errorf("taskID[%s] find  email addresses failed:%v", t.ID, err)
 			return

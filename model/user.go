@@ -17,11 +17,11 @@ type DBUser struct {
 	Salt       string     `gorm:"type:varchar(32)"`
 	Status     int        `gorm:"type:smallint"`
 	Email      string     `gorm:"type:varchar(255)"`
-	FailNotify string     `gorm:"index;type:varchar(8)"` // 任务失败是否通知
+	FailNotify int        `gorm:"index;type:smallint"` // 任务失败是否通知
 	CreateAt   *time.Time `gorm:"index;default:now()"`
 	UpdateAt   *time.Time
 	Creater    string `gorm:"type:varchar(36)"`
-	Role       string `gorm:"type:varchar(32)"` // 角色  admin taskAdmin  user
+	Role       int    `gorm:"index;type:smallint"` // 角色  admin taskAdmin  user
 }
 
 // TableName 返回表名
@@ -33,10 +33,10 @@ func GetUserTableName() string {
 	return userTableName
 }
 
-// FindEmails 寻找待发送的邮箱
-func FindEmails() ([]string, error) {
+// FindEmails 寻找待发送的邮箱 任务创建人以及任务管理员
+func FindEmails(id string) ([]string, error) {
 	db := DB()
 	var emails []string
-	err := db.Table(userTableName).Where("fail_notify = ? and status = ?", constant.NOTIFYON, constant.STATUSNORMALDB).Pluck("email", &emails).Error
+	err := db.Table(userTableName).Where("id= ? and fail_notify = ? and status = ? or role = ?", id, constant.NOTIFYONDB, constant.STATUSNORMALDB, constant.TASKADMINDB).Pluck("DISTINCT email", &emails).Error
 	return emails, err
 }

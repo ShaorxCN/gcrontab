@@ -30,3 +30,14 @@ func (r *UserRep) FindUserByUserName(userName string) (*user.User, error) {
 	}
 	return user.FromDBUserModel(u)
 }
+
+// FindUserByID 根据id查找
+func (r *UserRep) FindUserByID(id string) (*user.User, error) {
+	u := new(model.DBUser)
+	err := r.db.Model(u).Where(" id = ? and status = ?", id, constant.STATUSNORMALDB).First(u).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return user.FromDBUserModel(u)
+}

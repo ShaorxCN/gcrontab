@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// User 用来实现用户的 rest 接口。
+// TaskLog 用来实现用户的 rest 接口。
 type TaskLog struct{}
 
 // AddTaskRouter 注册用户 router。

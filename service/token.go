@@ -30,11 +30,16 @@ func (ts *TokenService) FindSaltByToken(atoken string) (*token.Token, error) {
 	return tokenRep.FindTokenByPK(atoken)
 }
 
+func (ts *TokenService) DelToken(del string) error {
+	tokenRep := rep.NewTokenRep(ts.db.New())
+	return tokenRep.DeleteTokenByPK(del)
+
+}
+
 func (ts *TokenService) UpdateToken(del string, newToken *token.Token) error {
 	tokenRep := rep.NewTokenRep(ts.db.New())
 
-	var err error
-	err = tokenRep.DeleteTokenByPK(del)
+	err := tokenRep.DeleteTokenByPK(del)
 	if err != nil {
 		return err
 	}

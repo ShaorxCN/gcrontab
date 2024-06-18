@@ -70,9 +70,9 @@ func (u *User) ToDBUserModel() (*model.DBUser, error) {
 	}
 
 	user.Email = u.Email
-	user.FailNotify = u.FailNotify
+	//user.FailNotify = u.FailNotify
 	user.Creater = u.Creater
-	user.Role = u.Role
+	//user.Role = u.Role
 
 	return user, nil
 }
@@ -99,8 +99,8 @@ func FromDBUserModel(u *model.DBUser) (*User, error) {
 		return nil, errors.New("status error")
 	}
 	e.Email = u.Email
-	e.FailNotify = u.FailNotify
+	//e.FailNotify = u.FailNotify
 	e.Creater = u.Creater
-	e.Role = u.Role
+	//e.Role = u.Role
 	return e, nil
 }

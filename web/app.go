@@ -1,6 +1,7 @@
 package web
 
 import (
+	"gcrontab/model"
 	"gcrontab/web/middleware"
 
 	"gcrontab/web/controller"
@@ -24,12 +25,27 @@ type GinConfig struct {
 	StatePort      int    `json:"state_port" env:"STATE_PORT"`
 }
 
+const (
+	DefaultTokenTTL    = 120
+	DefaultTaskExpired = 3600000
+)
+
 // Init 初始化 rest 服务。
 func (g *GinConfig) Init() (err error) {
 	r := gin.New()
 	logrus.WithFields(logrus.Fields{"host": g.Host, "port": g.Port}).Info("REST Server 启动")
 	if g.Mode != "" {
 		gin.SetMode(g.Mode)
+	}
+
+	middleware.TokenTTL = g.TokenTTL
+	if middleware.TokenTTL == 0 {
+		middleware.TokenTTL = DefaultTokenTTL
+	}
+
+	model.TaskExpired = g.TaskTimeOut
+	if model.TaskExpired == 0 {
+		model.TaskExpired = DefaultTaskExpired
 	}
 
 	logger := logrus.StandardLogger()

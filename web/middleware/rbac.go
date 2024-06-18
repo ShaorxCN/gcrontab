@@ -6,7 +6,6 @@ import (
 	"gcrontab/constant"
 	"gcrontab/custom"
 	"gcrontab/entity/token"
-	"gcrontab/model"
 	"gcrontab/service"
 	"gcrontab/utils"
 	"gcrontab/web/response"
@@ -15,6 +14,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+)
+
+var (
+	TokenTTL int // token过期时间 单位秒
 )
 
 func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
@@ -41,16 +44,11 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 
 	userService := service.NewUserService(utils.NewServiceContext(c, nil), nil, nil)
 
-	user, err := userService.FindUserByUserName(cm.UserName)
+	user, err := userService.FindUserByUserName(cm.UID)
 	if err != nil {
-		logrus.Errorf("find user by name[%s] failed:%v", cm.UserName, err)
+		logrus.Errorf("find user by name[%s] failed:%v", cm.UID, err)
 		return custom.ErrorInvalideAccessToken
 	}
-
-	role := utils.If(user.Role == "", constant.ANONYMOUS, user.Role).(string)
-	c.Request.Header.Set(constant.HEADEROPERATORNAME, user.NickName)
-	c.Request.Header.Set(constant.HEADEROPERATACCT, cm.UserName)
-	c.Request.Header.Set(constant.HEADEROPERATORROLE, role)
 
 	expTime, deadTime, err := parseExpAndDeadLine(cm.Exp, cm.DeadLine)
 	if err != nil {
@@ -60,8 +58,17 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 
 	if deadTime.Before(now) {
 		logrus.Errorf("token is expired,userId:[%s],nickName:[%s]", cm.UID, cm.NickName)
+		if err := tokenService.DelToken(tokenStr); err != nil {
+			logrus.Errorf("token[%s] del failed:%v", tokenStr, err)
+		}
 		return custom.ErrorInvalideAccessToken
 	}
+
+	role := utils.If(user.Role == "", constant.ANONYMOUS, user.Role).(string)
+	c.Request.Header.Set(constant.HEADEROPERATORNAME, user.NickName)
+	c.Request.Header.Set(constant.HEADEROPERATACCT, user.UserName)
+	c.Request.Header.Set(constant.HEADEROPERATORROLE, role)
+	c.Request.Header.Set(constant.HEADEROPERATORID, user.ID.GetIDValue())
 
 	if now.Before(expTime) {
 		return nil
@@ -73,13 +80,14 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 		return err
 	}
 
+	// 此处新老token deadline不变
+	// TODO: 这边jwt已经存库校验了 deadline是否也存库算了？或者不存 只根据createat 计算？
 	newClaims := &utils.Claims{
 		UID:      cm.UID,
-		Exp:      now.Add(time.Duration(model.TokenTTL) * time.Second).Format(constant.TIMELAYOUT),
+		Exp:      now.Add(time.Duration(TokenTTL) * time.Second).Format(constant.TIMELAYOUT),
 		NickName: user.NickName,
-		DeadLine: now.Add(time.Duration(2*model.TokenTTL) * time.Second).Format(constant.TIMELAYOUT),
+		DeadLine: cm.DeadLine,
 		Secret:   salt,
-		UserName: cm.UserName,
 		Role:     user.Role,
 	}
 	newToken, err := utils.GenToken(newClaims)

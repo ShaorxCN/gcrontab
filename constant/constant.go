@@ -41,7 +41,9 @@ const (
 
 	POSTBODY    = "BODY"
 	NOTIFYON    = "on"
+	NOTIFYONDB  = 1
 	NOTIFYOFF   = "off"
+	NOTIFYOFFDB = 0
 	STATUSON    = "on"
 	STATUSONDB  = 1
 	STATUSOFF   = "off"
@@ -64,10 +66,13 @@ const (
 
 	// role
 
-	ANONYMOUS = "anonymous"
-	ADMIN     = "admin"
-	USER      = "user"
-	TASKADMIN = "taskAdmin"
+	ANONYMOUS   = "anonymous"
+	ADMIN       = "admin"
+	ADMINDB     = 0
+	TASKADMIN   = "taskAdmin"
+	TASKADMINDB = 1
+	USER        = "user"
+	USERDB      = 3
 
 	// DB
 

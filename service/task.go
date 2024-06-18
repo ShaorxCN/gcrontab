@@ -27,7 +27,7 @@ func dealNewTask(t *task.Task, operator, nickName string) {
 	t.Creater = operator
 	t.CreaterName = nickName
 	if t.Expired_time == 0 {
-		t.Expired_time = model.TimeOut
+		t.Expired_time = model.TaskExpired
 	}
 
 	if t.Status == "" {

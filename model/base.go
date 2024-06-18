@@ -7,10 +7,8 @@ import (
 )
 
 var (
-	// TokenTTL 过期时间  单位s
-	TokenTTL int
-	// TimeOut 任务的默认超时时间
-	TimeOut int
+	// TaskExpired 任务的默认超时时间
+	TaskExpired int
 )
 
 // Base 是数据库基本结构
