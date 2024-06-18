@@ -41,3 +41,13 @@ func (r *UserRep) FindUserByID(id string) (*user.User, error) {
 	}
 	return user.FromDBUserModel(u)
 }
+
+// InsertUser 创建user
+func (r *UserRep) InsertUser(u *user.User) error {
+	dbu, err := u.ToDBUserModel()
+	if err != nil {
+		return err
+	}
+
+	return r.db.Create(dbu).Error
+}

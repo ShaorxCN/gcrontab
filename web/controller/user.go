@@ -1,14 +1,24 @@
 package controller
 
 import (
+	"gcrontab/constant"
+	"gcrontab/custom"
 	"gcrontab/rep/requestmodel"
+	"gcrontab/security"
+	"gcrontab/service"
+	"gcrontab/utils"
+	"gcrontab/web/response"
+	"gcrontab/web/validate"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	defaultUserName = "admin"
-	defaultPassWord = "admin"
+	defaultUserName = "evan"
+	defaultPassWord = "123456"
+	defaultEmail    = "test@test.com"
 )
 
 // User 用来实现用户的 rest 接口。
@@ -26,4 +36,52 @@ func AddUserRouter(e *gin.Engine) {
 
 func (u User) CreateUser(ctx *gin.Context) {
 	in := new(requestmodel.UserReq)
+
+	err := ctx.BindJSON(in)
+	if err != nil {
+		logrus.WithError(err).Error("input invalide")
+		ctx.AbortWithStatusJSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusBadRequest, custom.ErrorInvalideRequest.Error()))
+		return
+	}
+
+	err = validate.CheckCreateUserRequest(in)
+
+	if err != nil {
+		logrus.Errorf("check request failed:%v", err)
+		ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.ParamError, err.Error()))
+		return
+	}
+
+	userService := service.NewUserService(utils.NewServiceContext(ctx, nil), nil, nil)
+
+	err = userService.CreateUser(in)
+
+	if err != nil {
+		if err == custom.ErrorRecordExist {
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.RecordExist, custom.ErrorRecordExist.Error()))
+		} else {
+			logrus.Errorf("insert user to db failed:%v", err)
+			ctx.JSON(http.StatusOK, response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error()))
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusOK, response.NewSuccessBaseResponse())
+
+}
+
+func InsertAdminUser(username, password, email string) error {
+	username = utils.If(username == "", defaultUserName, username).(string)
+	password = utils.If(password == "", security.HashMD5(defaultPassWord), password).(string)
+	email = utils.If(email == "", defaultEmail, email).(string)
+
+	in := &requestmodel.UserReq{UserName: username, PassWord: password, Email: email, NickName: username, Role: constant.ADMIN}
+
+	err := validate.CheckCreateUserRequest(in)
+	if err != nil {
+		logrus.Errorf("check failed :%v", err)
+		return err
+	}
+
+	return service.InitAdmin(in)
 }

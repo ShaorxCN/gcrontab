@@ -70,9 +70,28 @@ func (u *User) ToDBUserModel() (*model.DBUser, error) {
 	}
 
 	user.Email = u.Email
-	//user.FailNotify = u.FailNotify
+
+	switch u.FailNotify {
+	case constant.NOTIFYON:
+		user.FailNotify = constant.NOTIFYONDB
+	case constant.NOTIFYOFF:
+		fallthrough
+	default:
+		user.FailNotify = constant.NOTIFYOFFDB
+	}
+
 	user.Creater = u.Creater
-	//user.Role = u.Role
+
+	switch u.Role {
+	case constant.ADMIN:
+		user.Role = constant.ADMINDB
+	case constant.TASKADMIN:
+		user.Role = constant.TASKADMINDB
+	case constant.USER:
+		fallthrough
+	default:
+		user.Role = constant.USERDB
+	}
 
 	return user, nil
 }
@@ -98,9 +117,27 @@ func FromDBUserModel(u *model.DBUser) (*User, error) {
 	default:
 		return nil, errors.New("status error")
 	}
+
 	e.Email = u.Email
-	//e.FailNotify = u.FailNotify
+	switch u.FailNotify {
+	case constant.NOTIFYONDB:
+		e.FailNotify = constant.NOTIFYON
+	case constant.NOTIFYOFFDB:
+		fallthrough
+	default:
+		e.FailNotify = constant.NOTIFYOFF
+	}
+
 	e.Creater = u.Creater
-	//e.Role = u.Role
+	switch u.Role {
+	case constant.ADMINDB:
+		e.Role = constant.ADMIN
+	case constant.TASKADMINDB:
+		e.Role = constant.TASKADMIN
+	case constant.USERDB:
+		fallthrough
+	default:
+		e.Role = constant.USER
+	}
 	return e, nil
 }

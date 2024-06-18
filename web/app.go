@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"gcrontab/model"
 	"gcrontab/web/middleware"
 
@@ -59,7 +60,10 @@ func (g *GinConfig) Init() (err error) {
 
 	controller.AddTaskRouter(r)
 	controller.AddTaskLogRouter(r)
-
+	err = controller.InsertAdminUser(g.AdminUserName, g.AdminPassWord, g.AdminEmail)
+	if err != nil {
+		return fmt.Errorf("init admin user failed:%v", err)
+	}
 	return r.Run(g.Host + ":" + g.Port)
 }
 

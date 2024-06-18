@@ -88,7 +88,11 @@ const (
 )
 
 var (
-	Host string
+	StatusSlice     = []string{STATUSNORMAL, "", STATUSDEL}
+	TaskStatusSlice = []string{STATUSOFF, "", STATUSOFF}
+	NotifySlice     = []string{NOTIFYOFF, "", NOTIFYON}
+	RoleSlice       = []string{ADMIN, TASKADMIN, USER}
+	Host            string
 )
 
 func init() {

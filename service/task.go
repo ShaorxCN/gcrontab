@@ -31,7 +31,7 @@ func dealNewTask(t *task.Task, operator, nickName string) {
 	}
 
 	if t.Status == "" {
-		t.Status = constant.STATUSON
+		t.Status = constant.STATUSOFF
 	}
 }
 

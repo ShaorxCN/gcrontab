@@ -13,11 +13,10 @@ import (
 )
 
 var (
-	units       = []string{"second", "minute", "hour", "day", "month", "week"}
-	statusSlice = []string{"off", "on", "", "del"}
-	protocols   = []string{constant.HTTPJOB}
-	postSlice   = []string{"JSON", "BODY", ""}
-	methods     = []string{"GET", "POST"}
+	units     = []string{"second", "minute", "hour", "day", "month", "week"}
+	protocols = []string{constant.HTTPJOB}
+	postSlice = []string{"JSON", "BODY", ""}
+	methods   = []string{"GET", "POST"}
 )
 
 // CheckCreateTaskRequest 创建任务request的基础校验
@@ -53,7 +52,7 @@ func CheckCreateTaskRequest(in *task.Task) error {
 		return custom.ParamErrorReturn(postType)
 	}
 
-	if !utils.StrInSlice(in.Status, statusSlice) {
+	if !utils.StrInSlice(in.Status, constant.TaskStatusSlice) {
 		return custom.ParamErrorReturn(status)
 	}
 
