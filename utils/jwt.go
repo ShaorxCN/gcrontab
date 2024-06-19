@@ -13,8 +13,7 @@ type Claims struct {
 	NickName string //  昵称
 	DeadLine string //  最后可以refresh token 时间  double exp
 	Secret   string //  salt
-	// UserName string
-	Role string
+	Role     string
 }
 
 // GenToken 生成token
@@ -39,14 +38,13 @@ func ValideToken(tokenStr, secret string) (*Claims, error) {
 			logrus.Errorf("parse token error")
 			return nil, errors.New("method error")
 		} else if m != jwt.SigningMethodHS256 {
-
 			return nil, errors.New("method error")
-
 		}
 		return []byte(secret), nil
-	})
+	}, jwt.WithoutClaimsValidation())
 
 	if err != nil {
+		logrus.Errorf("parse token error:%v", err)
 		return nil, errors.New("parse and valide token error")
 	}
 

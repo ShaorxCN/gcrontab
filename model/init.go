@@ -115,6 +115,8 @@ func Models() []interface{} {
 		&DBUser{},
 		&DBTask{},
 		&DBTaskLog{},
+		&DBToken{},
+		&DBPolicy{},
 	}
 }
 

@@ -8,8 +8,6 @@ import (
 	"regexp"
 )
 
-var roleSlice = []string{constant.ADMIN, constant.TASKADMIN, constant.USER, ""}
-
 func IsValidMD5(s string) bool {
 	if len(s) != 32 {
 		return false
@@ -37,6 +35,18 @@ func CheckCreateUserRequest(in *requestmodel.UserReq) (err error) {
 
 	if in.Role == "" {
 		in.Role = constant.USER
+	}
+
+	return
+}
+
+// CheckUserLoginRequest 用户登陆的基本校验
+func CheckUserLoginRequest(in *requestmodel.UserReq) (err error) {
+	switch {
+	case in.UserName == "" || len(in.UserName) > 255:
+		err = custom.ParamErrorReturn(userName)
+	case in.PassWord == "" || !IsValidMD5(in.PassWord):
+		err = custom.ParamErrorReturn(passWord)
 	}
 
 	return

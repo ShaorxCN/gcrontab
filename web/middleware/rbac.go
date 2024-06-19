@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"gcrontab/cache"
 	"gcrontab/casbin"
 	"gcrontab/constant"
 	"gcrontab/custom"
@@ -16,10 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	TokenTTL int // token过期时间 单位秒
-)
-
 func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 	now := utils.Now()
 
@@ -29,14 +26,21 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 	}
 
 	tokenService := service.NewTokenService(utils.NewServiceContext(c, nil), nil, nil)
+	// cache?
+	var saltCache interface{}
+	var ok bool
+	saltCache, ok = cache.GetSaltByToken(tokenStr)
+	if !ok {
+		te, err := tokenService.FindSaltByToken(tokenStr)
+		if err != nil {
+			logrus.Errorf("find token:[%s] error:%v", tokenStr, err)
+			return custom.ErrorInvalideAccessToken
+		}
 
-	te, err := tokenService.FindSaltByToken(tokenStr)
-	if err != nil {
-		logrus.Errorf("find token:[%s] error:%v", tokenStr, err)
-		return custom.ErrorInvalideAccessToken
+		saltCache = te.Salt
 	}
 
-	cm, err := utils.ValideToken(tokenStr, te.Salt)
+	cm, err := utils.ValideToken(tokenStr, saltCache.(string))
 	if err != nil {
 		logrus.Errorf("valide token:[%s] error:%v", tokenStr, err)
 		return custom.ErrorInvalideAccessToken
@@ -44,7 +48,7 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 
 	userService := service.NewUserService(utils.NewServiceContext(c, nil), nil, nil)
 
-	user, err := userService.FindUserByUserName(cm.UID)
+	user, err := userService.FindUserByID(cm.UID)
 	if err != nil {
 		logrus.Errorf("find user by name[%s] failed:%v", cm.UID, err)
 		return custom.ErrorInvalideAccessToken
@@ -84,7 +88,7 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 	// TODO: 这边jwt已经存库校验了 deadline是否也存库算了？或者不存 只根据createat 计算？
 	newClaims := &utils.Claims{
 		UID:      cm.UID,
-		Exp:      now.Add(time.Duration(TokenTTL) * time.Second).Format(constant.TIMELAYOUT),
+		Exp:      now.Add(time.Duration(constant.TokenTTL) * time.Second).Format(constant.TIMELAYOUT),
 		NickName: user.NickName,
 		DeadLine: cm.DeadLine,
 		Secret:   salt,

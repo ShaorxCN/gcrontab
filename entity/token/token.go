@@ -32,7 +32,7 @@ func (t *Token) ToDBTokenModel() (*model.DBToken, error) {
 		return nil, err
 	}
 
-	d.CreateTime = create
+	d.CreateTime = &create
 	return d, nil
 }
 

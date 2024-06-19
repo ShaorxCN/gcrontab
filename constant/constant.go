@@ -93,6 +93,7 @@ var (
 	NotifySlice     = []string{NOTIFYOFF, "", NOTIFYON}
 	RoleSlice       = []string{ADMIN, TASKADMIN, USER}
 	Host            string
+	TokenTTL        int // token过期时间 单位秒
 )
 
 func init() {

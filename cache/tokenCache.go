@@ -13,6 +13,7 @@ func RemoveToken(key string) {
 	tokenCache.Remove(key)
 }
 
+// SetToken 存放tokenStr 以及salt
 func SetToken(key string, value interface{}) {
 	tokenCache.Set(key, value)
 }

@@ -2,6 +2,8 @@ package web
 
 import (
 	"fmt"
+	"gcrontab/cache"
+	"gcrontab/constant"
 	"gcrontab/model"
 	"gcrontab/web/middleware"
 
@@ -39,9 +41,9 @@ func (g *GinConfig) Init() (err error) {
 		gin.SetMode(g.Mode)
 	}
 
-	middleware.TokenTTL = g.TokenTTL
-	if middleware.TokenTTL == 0 {
-		middleware.TokenTTL = DefaultTokenTTL
+	constant.TokenTTL = g.TokenTTL
+	if constant.TokenTTL == 0 {
+		constant.TokenTTL = DefaultTokenTTL
 	}
 
 	model.TaskExpired = g.TaskTimeOut
@@ -60,6 +62,12 @@ func (g *GinConfig) Init() (err error) {
 
 	controller.AddTaskRouter(r)
 	controller.AddTaskLogRouter(r)
+	controller.AddUserRouter(r)
+
+	err = cache.TokenCacheInit(g.TokenCacheSize)
+	if err != nil {
+		return err
+	}
 	err = controller.InsertAdminUser(g.AdminUserName, g.AdminPassWord, g.AdminEmail)
 	if err != nil {
 		return fmt.Errorf("init admin user failed:%v", err)

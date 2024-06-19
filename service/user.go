@@ -1,15 +1,20 @@
 package service
 
 import (
+	"gcrontab/cache"
 	"gcrontab/constant"
 	"gcrontab/custom"
+	"gcrontab/entity/token"
 	"gcrontab/entity/user"
 	"gcrontab/interface/entity"
 	"gcrontab/model"
 	"gcrontab/rep/requestmodel"
-	rep "gcrontab/rep/user"
+	trep "gcrontab/rep/token"
+	urep "gcrontab/rep/user"
 	"gcrontab/security"
 	"gcrontab/utils"
+	"gcrontab/web/response"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
@@ -61,12 +66,17 @@ func NewUserService(ctx *utils.ServiceContext, db *gorm.DB, users []*user.User) 
 }
 
 func (us *UserService) FindUserByUserName(userName string) (*user.User, error) {
-	userRep := rep.NewUserRep(us.db.New())
+	userRep := urep.NewUserRep(us.db.New())
 	return userRep.FindUserByUserName(userName)
 }
 
+func (us *UserService) FindUserByID(id string) (*user.User, error) {
+	userRep := urep.NewUserRep(us.db.New())
+	return userRep.FindUserByID(id)
+}
+
 func (us *UserService) CreateUser(in *requestmodel.UserReq) error {
-	userRep := rep.NewUserRep(us.db.New())
+	userRep := urep.NewUserRep(us.db.New())
 	if _, err := userRep.FindUserByUserName(in.UserName); err == nil {
 		return custom.ErrorRecordExist
 	}
@@ -79,15 +89,75 @@ func (us *UserService) CreateUser(in *requestmodel.UserReq) error {
 
 	err = userRep.InsertUser(userEntity)
 
-	if err.Error() == `pq: duplicate key value violates unique constraint "uix_tbl_user_user_name"` {
+	if err != nil && err.Error() == `pq: duplicate key value violates unique constraint "uix_tbl_user_user_name"` {
 		return custom.ErrorRecordExist
 	}
 
 	return err
 }
 
+func (us *UserService) Login(in *requestmodel.UserReq) (string, *response.BaseResponse) {
+	// TODO: 存在token已经登录直接踢吗？
+	userRep := urep.NewUserRep(us.db.New())
+	var ue *user.User
+	var err error
+	if ue, err = userRep.FindUserByUserName(in.UserName); err != nil {
+		logrus.WithError(err).Error("invalide user")
+		return "", response.NewBusinessFailedBaseResponse(custom.StatusNonAuthoritativeInfo, custom.ErrorLoginFailed.Error())
+	}
+
+	dealPwd := in.PassWord + ue.Salt
+
+	pwdCheck := security.HashSha256(dealPwd)
+
+	if pwdCheck != ue.PassWord {
+		logrus.WithError(err).Error("login failed")
+		return "", response.NewBusinessFailedBaseResponse(custom.StatusNonAuthoritativeInfo, custom.ErrorLoginFailed.Error())
+	}
+
+	c := new(utils.Claims)
+
+	c.UID = ue.ID.GetIDValue()
+	c.NickName = ue.NickName
+	var secret string
+	secret, err = utils.Nonce(10)
+	if err != nil {
+		logrus.Errorf("generate nonce failed:%v", err)
+		return "", response.NewBusinessFailedBaseResponse(custom.InternalServerError, custom.ErrorInternalServerError.Error())
+	}
+
+	c.Secret = secret
+	c.Role = ue.Role
+
+	now := utils.Now()
+	exp := now.Add(time.Duration(constant.TokenTTL) * time.Second).Format(constant.TIMELAYOUT)
+	dead := now.Add(time.Duration(10*constant.TokenTTL) * time.Second).Format(constant.TIMELAYOUT)
+	c.Exp = exp
+	c.DeadLine = dead
+
+	tokenStr, err := utils.GenToken(c)
+	if err != nil {
+		logrus.Errorf("generate  token failed:%v", err)
+		return "", response.NewBusinessFailedBaseResponse(custom.InternalServerError, custom.ErrorInternalServerError.Error())
+	}
+
+	tokenE := &token.Token{UserID: ue.ID.GetIDValue(), CreateTime: now.Format(constant.TIMELAYOUT), Token: tokenStr, Salt: c.Secret}
+
+	tokenRep := trep.NewTokenRep(us.db.New())
+
+	err = tokenRep.InsertToken(tokenE)
+	if err != nil {
+		logrus.Errorf("insert token failed:%v", err)
+		return "", response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error())
+	}
+
+	cache.SetToken(tokenStr, c.Secret)
+
+	return tokenStr, nil
+}
+
 func InitAdmin(in *requestmodel.UserReq) error {
-	userRep := rep.NewUserRep(model.DB().New())
+	userRep := urep.NewUserRep(model.DB().New())
 
 	if _, err := userRep.FindUserByUserName(in.UserName); err == nil || err != gorm.ErrRecordNotFound {
 		return err
