@@ -44,3 +44,15 @@ func (r *TokenRep) DeleteTokenByPK(tokenStr string) error {
 	db := r.db
 	return db.Delete(model.DBToken{}, "token = ? ", tokenStr).Error
 }
+
+func (r *TokenRep) FindTokensByUserID(id string) ([]string, error) {
+	ret := make([]string, 0, 10)
+	err := r.db.Table(model.GetTokenTableName()).Where("user_id = ?", id).Pluck("token", &ret).Error
+	return ret, err
+}
+
+// DeleteTokenByUserID 根据userID 删除token
+func (r *TokenRep) DeleteTokenByUserID(id string) error {
+	err := r.db.Where("user_id = ?", id).Delete(&model.DBToken{}).Error
+	return err
+}

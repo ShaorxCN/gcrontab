@@ -20,7 +20,7 @@ const (
 	HEADEROPERATORNAME = "Operator-Name"
 	HEADEROPERATACCT   = "Operator-UserName"
 	HEADEROPERATORROLE = "Operator-Role"
-	HEADERTOKEN        = "Access-Token"
+	HEADERTOKEN        = "Access-Token" // TODO: 分为两个token 一个做crsf防御 一个验证
 
 	// 时间格式
 

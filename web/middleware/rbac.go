@@ -46,14 +46,6 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 		return custom.ErrorInvalideAccessToken
 	}
 
-	userService := service.NewUserService(utils.NewServiceContext(c, nil), nil, nil)
-
-	user, err := userService.FindUserByID(cm.UID)
-	if err != nil {
-		logrus.Errorf("find user by name[%s] failed:%v", cm.UID, err)
-		return custom.ErrorInvalideAccessToken
-	}
-
 	expTime, deadTime, err := parseExpAndDeadLine(cm.Exp, cm.DeadLine)
 	if err != nil {
 		logrus.Errorf("valide token:[%s] error:%v", tokenStr, err)
@@ -65,6 +57,16 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 		if err := tokenService.DelToken(tokenStr); err != nil {
 			logrus.Errorf("token[%s] del failed:%v", tokenStr, err)
 		}
+
+		cache.RemoveToken(tokenStr)
+		return custom.ErrorInvalideAccessToken
+	}
+
+	userService := service.NewUserService(utils.NewServiceContext(c, nil), nil, nil)
+
+	user, err := userService.FindUserByID(cm.UID)
+	if err != nil {
+		logrus.Errorf("find user by name[%s] failed:%v", cm.UID, err)
 		return custom.ErrorInvalideAccessToken
 	}
 
