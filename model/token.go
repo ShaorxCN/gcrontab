@@ -6,9 +6,9 @@ import (
 
 // DBToken 是登陆token数据库模型。
 type DBToken struct {
-	UserID     string     `gorm:"index;type:varchar(1024)"`
+	UserID     string     `gorm:"primary_key;type:varchar(1024)"`
 	CreateTime *time.Time `gorm:"index"`
-	Token      string     `gorm:"primary_key;type:varchar(1024)"`
+	Token      string     `gorm:"type:varchar(1024)"`
 	Salt       string     `gorm:"type:varchar(32)"`
 }
 

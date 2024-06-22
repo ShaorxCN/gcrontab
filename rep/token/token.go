@@ -19,36 +19,27 @@ func NewTokenRep(db *gorm.DB) *TokenRep {
 	return &TokenRep{db}
 }
 
-// FindTokenByPK 根据主键查找
-func (r *TokenRep) FindTokenByPK(ts string) (*token.Token, error) {
-	t := new(model.DBToken)
-	t.Token = ts
-	err := r.db.Model(t).First(t).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return token.FromDBTokenModel(t), nil
-}
-
-func (r *TokenRep) InsertToken(te *token.Token) error {
+func (r *TokenRep) SaveToken(te *token.Token) error {
 	db := r.db
 	dt, err := te.ToDBTokenModel()
 	if err != nil {
 		return err
 	}
-	return db.Create(dt).Error
+	return db.Save(dt).Error
 }
 
-func (r *TokenRep) DeleteTokenByPK(tokenStr string) error {
+func (r *TokenRep) DeleteTokenByPK(id string) error {
 	db := r.db
-	return db.Delete(model.DBToken{}, "token = ? ", tokenStr).Error
+	return db.Delete(model.DBToken{}, "user_id = ? ", id).Error
 }
 
-func (r *TokenRep) FindTokensByUserID(id string) ([]string, error) {
-	ret := make([]string, 0, 10)
-	err := r.db.Table(model.GetTokenTableName()).Where("user_id = ?", id).Pluck("token", &ret).Error
-	return ret, err
+func (r *TokenRep) FindTokenByUserID(id string) (*token.Token, error) {
+	dbRet := new(model.DBToken)
+	err := r.db.Where("user_id = ?", id).First(dbRet).Error
+	if err != nil {
+		return nil, err
+	}
+	return token.FromDBTokenModel(dbRet), nil
 }
 
 // DeleteTokenByUserID 根据userID 删除token

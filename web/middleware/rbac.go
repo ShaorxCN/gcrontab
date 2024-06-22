@@ -20,8 +20,13 @@ import (
 func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 	now := utils.Now()
 
-	// TODO : 多个token情况出现？
 	if tokenStr == "" {
+		return custom.ErrorInvalideAccessToken
+	}
+
+	uid, goon := utils.ParseClaimWithoutValidate(tokenStr)
+
+	if !goon {
 		return custom.ErrorInvalideAccessToken
 	}
 
@@ -29,11 +34,11 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 	// cache?
 	var saltCache interface{}
 	var ok bool
-	saltCache, ok = cache.GetSaltByToken(tokenStr)
+	saltCache, ok = cache.GetSaltByUID(uid)
 	if !ok {
-		te, err := tokenService.FindSaltByToken(tokenStr)
+		te, err := tokenService.FindTokenByUID(uid)
 		if err != nil {
-			logrus.Errorf("find token:[%s] error:%v", tokenStr, err)
+			logrus.Errorf("find token by uid:[%s] error:%v", uid, err)
 			return custom.ErrorInvalideAccessToken
 		}
 
@@ -54,11 +59,11 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 
 	if deadTime.Before(now) {
 		logrus.Errorf("token is expired,userId:[%s],nickName:[%s]", cm.UID, cm.NickName)
-		if err := tokenService.DelToken(tokenStr); err != nil {
+		if err := tokenService.DelTokenByUID(uid); err != nil {
 			logrus.Errorf("token[%s] del failed:%v", tokenStr, err)
 		}
 
-		cache.RemoveToken(tokenStr)
+		cache.RemoveSalt(uid)
 		return custom.ErrorInvalideAccessToken
 	}
 
@@ -112,11 +117,13 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 		Salt:       salt,
 	}
 
-	err = tokenService.UpdateToken(tokenStr, newTokenE)
+	err = tokenService.UpdateToken(newTokenE)
 	if err != nil {
 		logrus.Errorf("update token failed:%v", err)
 		return custom.ErrorSaveToDBFailed
 	}
+
+	cache.SetSalt(cm.UID, salt)
 
 	return nil
 }

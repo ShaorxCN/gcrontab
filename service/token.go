@@ -25,24 +25,18 @@ func NewTokenService(ctx *utils.ServiceContext, db *gorm.DB, tokens []*token.Tok
 	return &TokenService{ctx, db, tokens}
 }
 
-func (ts *TokenService) FindSaltByToken(atoken string) (*token.Token, error) {
+func (ts *TokenService) FindTokenByUID(id string) (*token.Token, error) {
 	tokenRep := rep.NewTokenRep(ts.db.New())
-	return tokenRep.FindTokenByPK(atoken)
+	return tokenRep.FindTokenByUserID(id)
 }
 
-func (ts *TokenService) DelToken(del string) error {
+func (ts *TokenService) DelTokenByUID(id string) error {
 	tokenRep := rep.NewTokenRep(ts.db.New())
-	return tokenRep.DeleteTokenByPK(del)
+	return tokenRep.DeleteTokenByPK(id)
 
 }
 
-func (ts *TokenService) UpdateToken(del string, newToken *token.Token) error {
+func (ts *TokenService) UpdateToken(newToken *token.Token) error {
 	tokenRep := rep.NewTokenRep(ts.db.New())
-
-	err := tokenRep.DeleteTokenByPK(del)
-	if err != nil {
-		return err
-	}
-
-	return tokenRep.InsertToken(newToken)
+	return tokenRep.SaveToken(newToken)
 }

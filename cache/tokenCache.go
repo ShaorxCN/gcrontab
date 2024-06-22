@@ -1,23 +1,23 @@
 package cache
 
 var (
-	tokenCache Cache
+	saltCache Cache
 )
 
-func TokenCacheInit(max int) (err error) {
-	tokenCache, err = NewLruCache(max)
+func SaltCacheInit(max int) (err error) {
+	saltCache, err = NewLruCache(max)
 	return err
 }
 
-func RemoveToken(key string) {
-	tokenCache.Remove(key)
+func RemoveSalt(key string) {
+	saltCache.Remove(key)
 }
 
-// SetToken 存放tokenStr 以及salt
-func SetToken(key string, value interface{}) {
-	tokenCache.Set(key, value)
+// SetSalt 存放uid 以及salt
+func SetSalt(key string, value interface{}) {
+	saltCache.Set(key, value)
 }
 
-func GetSaltByToken(token string) (interface{}, bool) {
-	return tokenCache.Get(token)
+func GetSaltByUID(id string) (interface{}, bool) {
+	return saltCache.Get(id)
 }

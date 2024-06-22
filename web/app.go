@@ -64,7 +64,7 @@ func (g *GinConfig) Init() (err error) {
 	controller.AddTaskLogRouter(r)
 	controller.AddUserRouter(r)
 
-	err = cache.TokenCacheInit(g.TokenCacheSize)
+	err = cache.SaltCacheInit(g.TokenCacheSize)
 	if err != nil {
 		return err
 	}

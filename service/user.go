@@ -142,55 +142,14 @@ func (us *UserService) Login(in *requestmodel.UserReq) (string, *response.BaseRe
 
 	tokenE := &token.Token{UserID: ue.ID.GetIDValue(), CreateTime: now.Format(constant.TIMELAYOUT), Token: tokenStr, Salt: c.Secret}
 
-	// 开启事务 开不开逻辑都行 写下
-	us.db = us.db.Begin()
-	delToken := true
 	tokenRep := trep.NewTokenRep(us.db.New())
-	tokens, err := tokenRep.FindTokensByUserID(c.UID)
-
+	err = tokenRep.SaveToken(tokenE)
 	if err != nil {
-		// pluck不会出ErrRecordNotFound?
-		if err != gorm.ErrRecordNotFound {
-			logrus.Errorf("query token by user_id failed:%v", err)
-			return "", response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error())
-		}
-
-		delToken = false
-	}
-
-	if len(tokens) == 0 {
-		delToken = false
-	}
-
-	if delToken {
-		err = tokenRep.DeleteTokenByUserID(c.UID)
-		if err != nil {
-			logrus.Errorf("del token by user_id failed:%v", err)
-			us.db.Rollback()
-			return "", response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error())
-		}
-	}
-
-	err = tokenRep.InsertToken(tokenE)
-	if err != nil {
-		logrus.Errorf("insert token failed:%v", err)
-		us.db.Rollback()
+		logrus.Errorf("save token failed:%v", err)
 		return "", response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error())
 	}
 
-	if err = us.db.Commit().Error; err != nil {
-		logrus.Errorf("db commit failed:%v", err)
-		return "", response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error())
-	}
-
-	cache.SetToken(tokenStr, c.Secret)
-
-	if delToken {
-		for _, v := range tokens {
-			cache.RemoveToken(v)
-		}
-
-	}
+	cache.SetSalt(c.UID, c.Secret)
 
 	return tokenStr, nil
 }

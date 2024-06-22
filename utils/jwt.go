@@ -31,6 +31,25 @@ func GenToken(c *Claims) (string, error) {
 	return token.SignedString([]byte(c.Secret))
 }
 
+// ParseClaimWithoutValidate 获取userid 以及 基于parse解析是否继续校验token
+func ParseClaimWithoutValidate(tokenStr string) (string, bool) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+
+	if err != nil {
+		logrus.Errorf("parse token error:%v", err)
+		return "", false
+	}
+
+	var ret string
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		ret = claims["uid"].(string)
+	}
+
+	return ret, true
+
+}
+
 // ValideToken 校验token
 func ValideToken(tokenStr, secret string) (*Claims, error) {
 	tv, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
