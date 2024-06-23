@@ -5,4 +5,5 @@ type Cache interface {
 	Set(string, interface{})
 	Len() int
 	Remove(string)
+	Cap() int
 }

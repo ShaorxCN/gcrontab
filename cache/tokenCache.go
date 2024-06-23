@@ -9,15 +9,51 @@ func SaltCacheInit(max int) (err error) {
 	return err
 }
 
-func RemoveSalt(key string) {
-	saltCache.Remove(key)
+func RemoveUIDSalt(id string) {
+	saltCache.Remove(id)
 }
 
-// SetSalt 存放uid 以及salt
-func SetSalt(key string, value interface{}) {
-	saltCache.Set(key, value)
+func RemoveByUIDAndToken(uid, token string) {
+	inner, ok := saltCache.Get(uid)
+	if !ok {
+		return
+	}
+	inner.(*LruCache).Remove(token)
 }
 
-func GetSaltByUID(id string) (interface{}, bool) {
-	return saltCache.Get(id)
+// SetSalt 存放uid token  以及salt
+func SetSalt(uid, token, salt string) error {
+	inner, ok := saltCache.Get(uid)
+	if !ok {
+		inner, err := NewLruCache(saltCache.Cap())
+
+		if err != nil {
+			return err
+		}
+
+		saltCache.Set(uid, inner)
+		inner.Set(token, salt)
+		return nil
+	}
+	inner.(*LruCache).Set(token, salt)
+	return nil
+}
+
+func GetSaltByUIDAndToken(uid, token string) (string, bool) {
+	var ok bool
+	var inner interface{}
+	var ret interface{}
+	inner, ok = saltCache.Get(uid)
+
+	if !ok {
+		return "", false
+	}
+
+	ret, ok = inner.(*LruCache).Get(token)
+	if !ok {
+		return "", false
+	}
+
+	return ret.(string), true
+
 }

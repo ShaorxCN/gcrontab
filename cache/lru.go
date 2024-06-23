@@ -93,6 +93,10 @@ func (l *LruCache) Len() int {
 	return l.ll.Len()
 }
 
+func (l *LruCache) Cap() int {
+	return l.cap
+}
+
 func (l *LruCache) remove(e *list.Element) {
 	k := e.Value.(*entry).key
 	delete(l.cache, k)

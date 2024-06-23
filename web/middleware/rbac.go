@@ -34,11 +34,11 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 	// cache?
 	var saltCache interface{}
 	var ok bool
-	saltCache, ok = cache.GetSaltByUID(uid)
+	saltCache, ok = cache.GetSaltByUIDAndToken(uid, tokenStr)
 	if !ok {
-		te, err := tokenService.FindTokenByUID(uid)
+		te, err := tokenService.FindTokenByUIDAndToken(uid, tokenStr)
 		if err != nil {
-			logrus.Errorf("find token by uid:[%s] error:%v", uid, err)
+			logrus.Errorf("find token by uid:[%s] and token:[%s] error:%v", uid, tokenStr, err)
 			return custom.ErrorInvalideAccessToken
 		}
 
@@ -59,13 +59,15 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 
 	if deadTime.Before(now) {
 		logrus.Errorf("token is expired,userId:[%s],nickName:[%s]", cm.UID, cm.NickName)
-		if err := tokenService.DelTokenByUID(uid); err != nil {
+		if err := tokenService.DelTokenByUIDAndToken(uid, tokenStr); err != nil {
 			logrus.Errorf("token[%s] del failed:%v", tokenStr, err)
 		}
 
-		cache.RemoveSalt(uid)
+		cache.RemoveByUIDAndToken(uid, tokenStr)
 		return custom.ErrorInvalideAccessToken
 	}
+
+	cache.SetSalt(uid, tokenStr, saltCache.(string))
 
 	userService := service.NewUserService(utils.NewServiceContext(c, nil), nil, nil)
 
@@ -123,7 +125,7 @@ func checkAndUpdateToken(tokenStr string, c *gin.Context) error {
 		return custom.ErrorSaveToDBFailed
 	}
 
-	cache.SetSalt(cm.UID, salt)
+	cache.SetSalt(cm.UID, newToken, salt)
 
 	return nil
 }

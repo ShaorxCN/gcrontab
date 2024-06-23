@@ -30,10 +30,20 @@ func (ts *TokenService) FindTokenByUID(id string) (*token.Token, error) {
 	return tokenRep.FindTokenByUserID(id)
 }
 
-func (ts *TokenService) DelTokenByUID(id string) error {
+func (ts *TokenService) FindTokenByUIDAndToken(id, token string) (*token.Token, error) {
 	tokenRep := rep.NewTokenRep(ts.db.New())
-	return tokenRep.DeleteTokenByPK(id)
+	return tokenRep.FindTokenByUserIDAndToken(id, token)
+}
 
+func (ts *TokenService) DelTokenByUIDAndToken(id, token string) error {
+	tokenRep := rep.NewTokenRep(ts.db.New())
+	return tokenRep.DelTokenByUIDAndToken(id, token)
+
+}
+
+func (ts *TokenService) UpdateTokenByToken(uid, old, newStr string) error {
+	tokenRep := rep.NewTokenRep(ts.db.New())
+	return tokenRep.UpdateTokenByToken(uid, old, newStr)
 }
 
 func (ts *TokenService) UpdateToken(newToken *token.Token) error {

@@ -97,7 +97,6 @@ func (us *UserService) CreateUser(in *requestmodel.UserReq) error {
 }
 
 func (us *UserService) Login(in *requestmodel.UserReq) (string, *response.BaseResponse) {
-	// TODO: 存在token已经登录直接踢吗？
 	userRep := urep.NewUserRep(us.db.New())
 	var ue *user.User
 	var err error
@@ -148,8 +147,8 @@ func (us *UserService) Login(in *requestmodel.UserReq) (string, *response.BaseRe
 		logrus.Errorf("save token failed:%v", err)
 		return "", response.NewBusinessFailedBaseResponse(custom.StatusFailedDependency, custom.ErrorSaveToDBFailed.Error())
 	}
-
-	cache.SetSalt(c.UID, c.Secret)
+	cache.RemoveUIDSalt(c.UID)
+	cache.SetSalt(c.UID, tokenStr, c.Secret)
 
 	return tokenStr, nil
 }
