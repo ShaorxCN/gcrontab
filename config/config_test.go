@@ -51,6 +51,7 @@ func Test_withDefaultInfo(t *testing.T) {
 	os.Setenv("DB_USER", "evan")
 	os.Setenv("DB_NAME", "test_db")
 	os.Setenv("DB_PASSWORD", "test123")
+	os.Unsetenv("DB_PORT")
 	ok := DefaultManagement.getConfigFromENV()
 	if !ok {
 		t.Errorf("test get environment config failed")
