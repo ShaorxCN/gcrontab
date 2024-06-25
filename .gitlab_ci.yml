@@ -1,0 +1,87 @@
+image: $CI_BASE_IMAGE
+
+before_script:
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  
+stages: 
+    - base
+    - test
+    - lint
+    - build
+build-base-docker:
+    stage: base
+    script: 
+      - docker pull $CI_BASE_IMAGE_CRONTAB:latest || true
+      - docker build --cache-from $CI_BASE_IMAGE_CRONTAB:latest --tag $CI_BASE_IMAGE_CRONTAB:latest -f ./build/CI.Dockerfile .
+      - docker push $CI_BASE_IMAGE_CRONTAB:latest
+    only: 
+      changes:
+        - build/CI.Dockerfile
+        - go.mod
+        - go.sum
+      refs:
+        - develop
+        - master
+    tags:
+      - gcrontab
+test:
+    stage: test
+    script:
+      - go test -coverpkg=./... -timeout=30s -gcflags=all=-l ./...
+    only:
+      - develop
+      - master
+      - merge_requests
+    tags:
+      - gcrontab
+lint:
+    stage: lint
+    script:
+      - golangci-lint  run --deadline=2m -c=.golangci.yml 
+    only:
+      - develop
+      - master
+      - merge_requests
+      - /^release-.*$/
+    tags:
+      - gcrontab
+build:
+    stage: build
+    script: 
+      - cd build
+      - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gcrontab ../main.go
+      - docker pull $CI_REGISTRY_IMAGE:latest || true
+      - docker build --cache-from $CI_REGISTRY_IMAGE:master --tag $CI_REGISTRY_IMAGE:master -f ./Dockerfile .
+      - docker push $CI_REGISTRY_IMAGE:master
+    only:
+      - master
+    tags:
+      - gcrontab
+build-dev:
+    stage: build
+    script: 
+      - cd build
+      - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gcrontab ../main.go
+      - docker pull $CI_REGISTRY_IMAGE:dev-latest || true
+      - docker build --cache-from $CI_REGISTRY_IMAGE:dev-latest --tag $CI_REGISTRY_IMAGE:dev-latest -f ./Dockerfile .
+      - docker push $CI_REGISTRY_IMAGE:dev-latest
+    only:
+      - develop
+    tags:
+      - gcrontab
+build-release:
+    stage: build
+    script: 
+      - cd build
+      - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gcrontab ../main.go
+      - docker pull $CI_REGISTRY_IMAGE:latest || true
+      - docker build --cache-from $CI_REGISTRY_IMAGE:latest --tag $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG -f ./Dockerfile .
+      - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+    # use regexp
+    only:
+      - /^release-.*$/
+    # use special keyword
+    except:
+      - branches
+    tags:
+      - gcrontab
